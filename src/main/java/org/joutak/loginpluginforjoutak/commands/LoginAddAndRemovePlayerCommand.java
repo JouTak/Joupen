@@ -55,7 +55,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
     private boolean checkPermission(CommandSender commandSender, String permission) {
         if (!commandSender.hasPermission(permission)) {
-            TextComponent textComponent = Component.text("Go fuck yourself. You don't have permission", NamedTextColor.RED)
+            TextComponent textComponent = Component.text("Go walk around. You don't have permission", NamedTextColor.RED)
                     .toBuilder().build();
             commandSender.sendMessage(textComponent);
             return true;
@@ -65,7 +65,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
     private void helpCommand(CommandSender commandSender) {
         TextComponent textComponent = Component.text()
-                .append(Component.text("JouHodka", NamedTextColor.GOLD))
+                .append(Component.text("Joupen", NamedTextColor.GOLD))
                 .appendNewline()
                 .append(Component.text("Вайтлист плагин для ДжоуТека", NamedTextColor.GOLD))
                 .appendNewline()
@@ -129,7 +129,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
         if (playerDto == null) {
             TextComponent textComponent = Component.text("SOMETHING WENT WRONG! " +
-                    "JOUHODKA PLUGIN COULDN'T FIND INFO ABOUT YOU!" +
+                    "JOUPEN PLUGIN COULDN'T FIND INFO ABOUT YOU!" +
                     " PLEASE CONTACT THE ADMINISTRATOR (ENDERDISSA)", NamedTextColor.RED);
             commandSender.sendMessage(textComponent);
             log.error("CAN'T FIND INFO ABOUT EXISTING PLAYER " + commandSender.getName() + " !!!! CHECK IT CAREFULLY!!!!");
