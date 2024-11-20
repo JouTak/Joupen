@@ -3,6 +3,7 @@ package org.joutak.loginpluginforjoutak.commands;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -49,6 +50,10 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
         if (args[0].equals("gift")) {
             prolongCommand(commandSender, args, true);
+        }
+
+        if (args[0].equals("link")){
+            linkCommand(commandSender);
         }
 
     }
@@ -268,6 +273,19 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             commandSender.sendMessage(textComponent);
             log.warn("Added new player to the whitelist: {}", args[1]);
         }
+    }
+
+    private void linkCommand(CommandSender commandSender) {
+        TextComponent textComponent = Component.text()
+                .append(Component.text("Joupen", NamedTextColor.GOLD))
+                .appendNewline()
+                .append(Component.text("Ссылка на оплату проходочки ДжоуТека:", NamedTextColor.BLUE))
+                .appendNewline()
+                .append(Component.text("https://clck.ru/3EEMC9", NamedTextColor.BLUE))
+                .append(Component.text("*КЛИК*", NamedTextColor.GOLD))
+                .clickEvent(ClickEvent.openUrl("https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b/"))
+                .build();
+        commandSender.sendMessage(textComponent);
     }
 
 }
