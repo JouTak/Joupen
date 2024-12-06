@@ -20,6 +20,7 @@ import org.joutak.loginpluginforjoutak.utils.JoutakLoginProperties;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.EventListener;
+import java.util.List;
 
 @Slf4j
 public class PlayerJoinEventHandler implements EventListener, Listener {
@@ -35,9 +36,10 @@ public class PlayerJoinEventHandler implements EventListener, Listener {
             Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
 
             PlayerDtos playerDtos = reader.read();
-            playerDtos.getPlayerDtoList().remove(playerDto);
+            List<PlayerDto> list = playerDtos.getPlayerDtoList();
+            int index = list.indexOf(playerDto);
             playerDto.setName(playerLoginEvent.getPlayer().getName());
-            playerDtos.getPlayerDtoList().add(playerDto);
+            list.set(index, playerDto);
             writer.write(playerDtos);
             log.warn("Player {} updated his nickname, adjusted in database.", playerDto.getName());
         }
@@ -65,7 +67,8 @@ public class PlayerJoinEventHandler implements EventListener, Listener {
             Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
 
             PlayerDtos playerDtos = reader.read();
-            playerDtos.getPlayerDtoList().remove(playerDto);
+            List<PlayerDto> list = playerDtos.getPlayerDtoList();
+            int index = list.indexOf(playerDto);
             LocalDate now = LocalDate.now();
             LocalDate validUntil = PlayerDtoCalendarConverter.getValidUntil(playerDto);
             LocalDate lastProlongDate = PlayerDtoCalendarConverter.getLastProlongDate(playerDto);
@@ -73,7 +76,7 @@ public class PlayerJoinEventHandler implements EventListener, Listener {
             playerDto.setValidUntil(validUntil.format(JoutakLoginProperties.dateTimeFormatter));
             playerDto.setLastProlongDate(now.format(JoutakLoginProperties.dateTimeFormatter));
             playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId().toString());
-            playerDtos.getPlayerDtoList().add(playerDto);
+            playerDtos.getPlayerDtoList().set(index, playerDto);
             writer.write(playerDtos);
             log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
         }
