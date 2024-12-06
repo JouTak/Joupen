@@ -60,7 +60,7 @@ public class PlayerJoinEventHandler implements EventListener, Listener {
             return;
         }
         String uuid = playerDto.getUuid();
-        if (uuid.equals("-1")) {
+        if (uuid.equals("00000000-0000-0000-0000-000000000000")) {
             Writer writer = new JsonWriterImpl(JoutakLoginProperties.saveFilepath);
             Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
 

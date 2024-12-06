@@ -224,7 +224,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             playerDto.setPaid(!gift);
             playerDto.setLastProlongDate(now.minusDays(1).format(JoutakLoginProperties.dateTimeFormatter));
             playerDto.setValidUntil(now.minusDays(1).format(JoutakLoginProperties.dateTimeFormatter));
-            playerDto.setUuid("-1");
+            playerDto.setUuid("00000000-0000-0000-0000-000000000000");
         }
 
         LocalDate validUntil = PlayerDtoCalendarConverter.getValidUntil(playerDto);
