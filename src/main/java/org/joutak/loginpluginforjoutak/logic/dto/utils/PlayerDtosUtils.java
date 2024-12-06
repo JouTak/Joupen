@@ -22,7 +22,7 @@ public final class PlayerDtosUtils {
         Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
 
         return reader.read().getPlayerDtoList().stream()
-                .filter(it -> it.getUuid().equalsIgnoreCase(uuid.toString()))
+                .filter(it -> UUID.fromString(it.getUuid()).equals(uuid))
                 .findFirst().orElse(null);
     }
 
