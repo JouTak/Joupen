@@ -20,6 +20,7 @@ import org.joutak.loginpluginforjoutak.utils.JoutakLoginProperties;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.EventListener;
+import java.util.List;
 
 @Slf4j
 public class PlayerJoinEventHandler implements EventListener, Listener {
@@ -27,7 +28,22 @@ public class PlayerJoinEventHandler implements EventListener, Listener {
     @EventHandler
     public void playerJoinEvent(PlayerLoginEvent playerLoginEvent) {
 
-        PlayerDto playerDto = PlayerDtosUtils.findPlayerByName(playerLoginEvent.getPlayer().getName());
+        PlayerDto playerDto = PlayerDtosUtils.findPlayerByUuid(playerLoginEvent.getPlayer().getUniqueId());
+        if (playerDto == null) {
+            playerDto = PlayerDtosUtils.findPlayerByName(playerLoginEvent.getPlayer().getName());
+        } else if (!playerDto.getName().equals(playerLoginEvent.getPlayer().getName())) {
+            Writer writer = new JsonWriterImpl(JoutakLoginProperties.saveFilepath);
+            Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
+
+            PlayerDtos playerDtos = reader.read();
+            List<PlayerDto> list = playerDtos.getPlayerDtoList();
+            int index = list.indexOf(playerDto);
+            playerDto.setName(playerLoginEvent.getPlayer().getName());
+            list.set(index, playerDto);
+            writer.write(playerDtos);
+            log.warn("Player {} updated his nickname, adjusted in database.", playerDto.getName());
+        }
+
         if (playerDto == null) {
             TextComponent textComponent = Component.text()
                     .append(Component.text("Тебя нет в вайтлисте. Напиши по этому поводу ", NamedTextColor.BLUE))
@@ -46,32 +62,23 @@ public class PlayerJoinEventHandler implements EventListener, Listener {
             return;
         }
         String uuid = playerDto.getUuid();
-        if (uuid.equals("-1")) {
+        if (uuid.equals("00000000-0000-0000-0000-000000000000")) {
             Writer writer = new JsonWriterImpl(JoutakLoginProperties.saveFilepath);
             Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
 
             PlayerDtos playerDtos = reader.read();
-            playerDtos.getPlayerDtoList().remove(playerDto);
+            List<PlayerDto> list = playerDtos.getPlayerDtoList();
+            int index = list.indexOf(playerDto);
             LocalDate now = LocalDate.now();
             LocalDate validUntil = PlayerDtoCalendarConverter.getValidUntil(playerDto);
             LocalDate lastProlongDate = PlayerDtoCalendarConverter.getLastProlongDate(playerDto);
             validUntil = validUntil.plusDays(ChronoUnit.DAYS.between(lastProlongDate, now));
             playerDto.setValidUntil(validUntil.format(JoutakLoginProperties.dateTimeFormatter));
             playerDto.setLastProlongDate(now.format(JoutakLoginProperties.dateTimeFormatter));
-            playerDtos.getPlayerDtoList().add(playerDto);
-            writer.write(playerDtos);
-            log.warn("Player {} joined for the first time, adjusted prohodka", playerDto.getName());
-        }
-        if (!uuid.equals(playerLoginEvent.getPlayer().getUniqueId().toString())) {
-            Writer writer = new JsonWriterImpl(JoutakLoginProperties.saveFilepath);
-            Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
-
-            PlayerDtos playerDtos = reader.read();
-            playerDtos.getPlayerDtoList().remove(playerDto);
             playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId().toString());
-            playerDtos.getPlayerDtoList().add(playerDto);
+            playerDtos.getPlayerDtoList().set(index, playerDto);
             writer.write(playerDtos);
-            log.warn("changed UUID of player {} to new one {}", playerDto.getName(), playerDto.getUuid());
+            log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
         }
 
         playerLoginEvent.allow();
