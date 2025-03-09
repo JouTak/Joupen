@@ -1,0 +1,31 @@
+#Конфиг для запуска марии в локальном докере команда : docker-compose (название) up -d
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:

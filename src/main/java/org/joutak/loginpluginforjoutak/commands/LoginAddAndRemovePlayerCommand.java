@@ -8,18 +8,18 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.joutak.loginpluginforjoutak.logic.dto.PlayerDto;
-import org.joutak.loginpluginforjoutak.logic.dto.PlayerDtos;
-import org.joutak.loginpluginforjoutak.logic.dto.converter.PlayerDtoCalendarConverter;
-import org.joutak.loginpluginforjoutak.logic.dto.utils.PlayerDtosUtils;
-import org.joutak.loginpluginforjoutak.logic.inputoutput.JsonReaderImpl;
-import org.joutak.loginpluginforjoutak.logic.inputoutput.JsonWriterImpl;
-import org.joutak.loginpluginforjoutak.logic.inputoutput.Reader;
-import org.joutak.loginpluginforjoutak.logic.inputoutput.Writer;
-import org.joutak.loginpluginforjoutak.utils.JoutakLoginProperties;
+import org.joutak.loginpluginforjoutak.dto.PlayerDto;
+import org.joutak.loginpluginforjoutak.dto.PlayerDtos;
+import org.joutak.loginpluginforjoutak.inputoutput.JsonReaderImpl;
+import org.joutak.loginpluginforjoutak.inputoutput.JsonWriterImpl;
+import org.joutak.loginpluginforjoutak.inputoutput.Reader;
+import org.joutak.loginpluginforjoutak.inputoutput.Writer;
+import org.joutak.loginpluginforjoutak.repository.PlayerDtosUtils;
+import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
@@ -53,7 +53,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             prolongCommand(commandSender, args, true);
         }
 
-        if (args[0].equals("link")){
+        if (args[0].equals("link")) {
             linkCommand(commandSender);
         }
 
@@ -118,13 +118,13 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                     .append(Component.text(playerDto.getName(), NamedTextColor.BLUE))
                     .appendNewline()
                     .append(Component.text("UUID Игрока:", NamedTextColor.GREEN))
-                    .append(Component.text(playerDto.getUuid(), NamedTextColor.BLUE))
+                    .append(Component.text(playerDto.getUuid().toString(), NamedTextColor.BLUE))
                     .appendNewline()
                     .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
-                    .append(Component.text(playerDto.getLastProlongDate(), NamedTextColor.BLUE))
+                    .append(Component.text(playerDto.getLastProlongDate().toString(), NamedTextColor.BLUE))
                     .appendNewline()
                     .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                    .append(Component.text(playerDto.getValidUntil(), NamedTextColor.BLUE))
+                    .append(Component.text(playerDto.getValidUntil().toString(), NamedTextColor.BLUE))
                     .build();
 
             commandSender.sendMessage(textComponent);
@@ -138,7 +138,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                     "JOUPEN PLUGIN COULDN'T FIND INFO ABOUT YOU!" +
                     " PLEASE CONTACT THE ADMINISTRATOR (ENDERDISSA)", NamedTextColor.RED);
             commandSender.sendMessage(textComponent);
-            log.error("CAN'T FIND INFO ABOUT EXISTING PLAYER " + commandSender.getName() + " !!!! CHECK IT CAREFULLY!!!!");
+            log.error("CAN'T FIND INFO ABOUT EXISTING PLAYER {} !!!! CHECK IT CAREFULLY!!!!", commandSender.getName());
             return;
         }
 
@@ -147,13 +147,13 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .append(Component.text(playerDto.getName(), NamedTextColor.BLUE))
                 .appendNewline()
                 .append(Component.text("Твой UUID:", NamedTextColor.GREEN))
-                .append(Component.text(playerDto.getUuid(), NamedTextColor.BLUE))
+                .append(Component.text(playerDto.getUuid().toString(), NamedTextColor.BLUE))
                 .appendNewline()
                 .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
-                .append(Component.text(playerDto.getLastProlongDate(), NamedTextColor.BLUE))
+                .append(Component.text(playerDto.getLastProlongDate().toString(), NamedTextColor.BLUE))
                 .appendNewline()
                 .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(playerDto.getValidUntil(), NamedTextColor.BLUE))
+                .append(Component.text(playerDto.getValidUntil().toString(), NamedTextColor.BLUE))
                 .build();
 
         commandSender.sendMessage(textComponent);
@@ -176,8 +176,8 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         }
 
         // init vars
-        Reader reader = new JsonReaderImpl(JoutakLoginProperties.saveFilepath);
-        Writer writer = new JsonWriterImpl(JoutakLoginProperties.saveFilepath);
+        Reader reader = new JsonReaderImpl(JoutakProperties.saveFilepath);
+        Writer writer = new JsonWriterImpl(JoutakProperties.saveFilepath);
         LocalDate now = LocalDate.now();
 
         // parse period
@@ -201,15 +201,15 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             PlayerDtos playerDtos = reader.read();
             playerDtos.getPlayerDtoList().forEach(
                     player -> {
-                        if (!player.getPaid() && !gift) {
+                        if (!player.isPaid() && !gift) {
                             return;
                         }
-                        LocalDate validUntil = PlayerDtoCalendarConverter.getValidUntil(player);
+                        LocalDate validUntil = player.getValidUntil();
                         if (validUntil.isBefore(now)) {
                             validUntil = now;
                         }
                         validUntil = validUntil.plusDays(daysAmount);
-                        player.setValidUntil(validUntil.format(JoutakLoginProperties.dateTimeFormatter));
+                        player.setValidUntil(validUntil);
                     }
             );
             writer.write(playerDtos);
@@ -228,21 +228,21 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             playerDto = new PlayerDto();
             playerDto.setName(args[1]);
             playerDto.setPaid(!gift);
-            playerDto.setLastProlongDate(now.minusDays(1).format(JoutakLoginProperties.dateTimeFormatter));
-            playerDto.setValidUntil(now.minusDays(1).format(JoutakLoginProperties.dateTimeFormatter));
-            playerDto.setUuid("00000000-0000-0000-0000-000000000000");
+            playerDto.setLastProlongDate(now.minusDays(1));
+            playerDto.setValidUntil(now.minusDays(1));
+            playerDto.setUuid(UUID.fromString("00000000-0000-0000-0000-000000000000"));
         }
 
-        LocalDate validUntil = PlayerDtoCalendarConverter.getValidUntil(playerDto);
+        LocalDate validUntil = playerDto.getValidUntil();
 
         // if pay streak broken
         if (validUntil.isBefore(LocalDate.now())) {
-            playerDto.setLastProlongDate(now.format(JoutakLoginProperties.dateTimeFormatter));
+            playerDto.setLastProlongDate(now);
             validUntil = now;
         }
 
         validUntil = validUntil.plusDays(daysAmount);
-        playerDto.setValidUntil(validUntil.format(JoutakLoginProperties.dateTimeFormatter));
+        playerDto.setValidUntil(validUntil);
 
         PlayerDtos playerDtos = reader.read();
         PlayerDto currPlayerDto = PlayerDtosUtils.findPlayerByName(playerDto.getName());
