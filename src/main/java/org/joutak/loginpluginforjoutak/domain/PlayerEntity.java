@@ -1,7 +1,9 @@
 package org.joutak.loginpluginforjoutak.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -9,6 +11,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "players")
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class PlayerEntity {
 
     @Id
@@ -29,16 +33,4 @@ public class PlayerEntity {
 
     @Column(name = "paid", nullable = false)
     private Boolean paid;
-
-    public PlayerEntity(Long id, String name, UUID uuid, LocalDate lastProlongDate, LocalDate validUntil, Boolean paid) {
-        this.id = id;
-        this.name = name;
-        this.uuid = uuid;
-        this.lastProlongDate = lastProlongDate;
-        this.validUntil = validUntil;
-        this.paid = paid;
-    }
-
-    public PlayerEntity() {
-    }
 }

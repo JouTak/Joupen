@@ -8,9 +8,9 @@ import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
 public class PlayerRepositoryFactory {
 
     public static PlayerRepository getPlayerRepository(EntityManager entityManager) {
-        if ("prod".equals(JoutakProperties.profile)) {
+        if (JoutakProperties.useSql) {
             if (entityManager == null) {
-                throw new IllegalStateException("EntityManager must be provided for 'prod' profile");
+                throw new IllegalStateException("EntityManager must be provided when useSql is true");
             }
             return new PlayerRepositoryDbImpl(entityManager);
         } else {

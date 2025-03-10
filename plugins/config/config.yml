@@ -1,3 +1,6 @@
+plugin:
+  saveFilepath: player.json
+  useSql: true
 database:
   url: jdbc:mariadb://localhost:3306/mydb
   user: user
@@ -7,5 +10,3 @@ database:
   hbm2ddl: update
   showSql: true
   formatSql: true
-plugin:
-  saveFilepath: loginPluginRes/players.json  # Используется для миграции в prod

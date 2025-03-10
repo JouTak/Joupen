@@ -19,7 +19,8 @@ import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
+
+import static org.joutak.loginpluginforjoutak.enums.UUIDTypes.INITIAL_UUID;
 
 @Slf4j
 public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
@@ -230,7 +231,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             playerDto.setPaid(!gift);
             playerDto.setLastProlongDate(now.minusDays(1));
             playerDto.setValidUntil(now.minusDays(1));
-            playerDto.setUuid(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+            playerDto.setUuid(INITIAL_UUID.getUuid());
         }
 
         LocalDate validUntil = playerDto.getValidUntil();

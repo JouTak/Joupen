@@ -26,35 +26,32 @@ public final class LoginPluginForJoutak extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Проверяем, включён ли плагин в конфигурации
         if (!JoutakProperties.enabled) {
-            log.error("Plugin was disabled in config. Enable it in application.yml or application-{profile}.yml");
+            log.error("Plugin was disabled in config. Enable it in config.yml");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        // Инициализация репозитория в зависимости от профиля
         try {
-            // Инициализация DatabaseManager только для prod профиля
-            if ("prod".equals(JoutakProperties.profile)) {
+            if (JoutakProperties.useSql) {
                 databaseManager = new DatabaseManager();
                 this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager.getEntityManager());
+                if (!isDatabaseEmpty()) {
+                    log.info("Database has players, skipping JSON migration");
+                } else {
+                    migratePlayersFromJsonToDatabase();
+                }
             } else {
-                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(null); // Файловый репозиторий
+                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(null);
             }
-            log.info("Using profile: {} with repository: {}", JoutakProperties.profile, playerRepository.getClass().getSimpleName());
-
-            // Перенос данных из JSON в базу, если профиль prod
-            if ("prod".equals(JoutakProperties.profile)) {
-                migratePlayersFromJsonToDatabase();
-            }
+            log.info("Using profile  with repository {}",
+                    playerRepository.getClass().getSimpleName());
         } catch (Exception e) {
             log.error("Failed to initialize repository: {}", e.getMessage(), e);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        // Регистрация команд и событий
         new LoginAddAndRemovePlayerCommand();
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
 
@@ -71,7 +68,23 @@ public final class LoginPluginForJoutak extends JavaPlugin {
         log.info("LoginPluginForJoutak disabled!");
     }
 
+    private boolean isDatabaseEmpty() {
+        if (!JoutakProperties.useSql || playerRepository == null) {
+            return true;
+        }
+        try {
+            return playerRepository.findAll().isEmpty();
+        } catch (Exception e) {
+            log.warn("Failed to check database emptiness: {}", e.getMessage());
+            return true;
+        }
+    }
+
     private void migratePlayersFromJsonToDatabase() {
+        if (!JoutakProperties.useSql) {
+            return;
+        }
+
         JsonReaderImpl reader = new JsonReaderImpl(JoutakProperties.saveFilepath);
         PlayerDtos players = reader.read();
 

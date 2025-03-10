@@ -2,9 +2,9 @@
   "playerDtoList" : [ {
     "id" : null,
     "name" : "TestPlayer",
-    "uuid" : "615a3258-bda7-782c-aede-20da6674ef28",
-    "lastProlongDate" : [ 2025, 2, 17 ],
-    "validUntil" : [ 2025, 3, 19 ],
+    "uuid" : "d82c9b07-2881-7ad7-be80-9d033de57156",
+    "lastProlongDate" : [ 2025, 2, 19 ],
+    "validUntil" : [ 2025, 3, 21 ],
     "paid" : true
   } ]
 }

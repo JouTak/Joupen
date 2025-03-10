@@ -28,12 +28,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.joutak.loginpluginforjoutak.enums.UUIDTypes.INITIAL_UUID;
+
 @Slf4j
 public class PlayerJoinEventHandler implements Listener {
 
     private final PlayerRepository playerRepository;
     private final PlayerMapper playerMapper;
-    private static final UUID INITIAL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
 
     public PlayerJoinEventHandler(PlayerRepository playerRepository) {
         this.playerRepository = playerRepository;
@@ -98,7 +100,7 @@ public class PlayerJoinEventHandler implements Listener {
 
         // Обновление UUID и продление подписки
         UUID uuid = playerDto.getUuid();
-        if (uuid.equals(INITIAL_UUID)) {
+        if (uuid.equals(INITIAL_UUID.getUuid())) {
             LocalDate now = LocalDate.now();
             LocalDate validUntil = playerDto.getValidUntil()
                     .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
@@ -115,7 +117,7 @@ public class PlayerJoinEventHandler implements Listener {
                 }
             } catch (Exception e) {
                 log.warn("Ошибка сохранения в репозитории для игрока {}. Сохраняю в файл.", playerDto.getName(), e);
-                updatePlayerInFile(playerDto, player.getName(), INITIAL_UUID);
+                updatePlayerInFile(playerDto, player.getName(), INITIAL_UUID.getUuid());
             }
             log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
         }
