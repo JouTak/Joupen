@@ -235,9 +235,11 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
         LocalDate validUntil = PlayerDtoCalendarConverter.getValidUntil(playerDto);
 
+        if (!gift)
+            playerDto.setLastProlongDate(now.format(JoutakLoginProperties.dateTimeFormatter));
+
         // if pay streak broken
         if (validUntil.isBefore(LocalDate.now())) {
-            playerDto.setLastProlongDate(now.format(JoutakLoginProperties.dateTimeFormatter));
             validUntil = now;
         }
 
