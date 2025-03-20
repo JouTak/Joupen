@@ -1,5 +1,6 @@
 package org.joutak.loginpluginforjoutak.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,10 +21,11 @@ public class PlayerDto {
 
     private UUID uuid;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate lastProlongDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate validUntil;
 
-    private boolean isPaid = true;
-
+    private boolean paid = true;
 }
