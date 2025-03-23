@@ -35,6 +35,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             TextComponent textComponent = Component.text("Wrong amount of arguments. Try /joupen help", NamedTextColor.GOLD)
                     .toBuilder().build();
             commandSender.sendMessage(textComponent);
+            return;
         }
 
         if (args[0].equals("help")) {
