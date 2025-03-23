@@ -249,10 +249,16 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         PlayerDtos playerDtos = reader.read();
         PlayerDto currPlayerDto = PlayerDtosUtils.findPlayerByName(playerDto.getName());
         List<PlayerDto> list = playerDtos.getPlayerDtoList();
-        int index = list.indexOf(currPlayerDto);
-        list.set(index, playerDto);
 
+        if (!isNew) {
+            int index = list.indexOf(currPlayerDto);
+            list.set(index, playerDto);
+        }
+        else {
+            list.add(playerDto);
+        }
         writer.write(playerDtos);
+
         if (!isNew) {
             TextComponent textComponent = Component.text()
                     .append(Component.text("Игрок ", NamedTextColor.AQUA))
