@@ -1,4 +1,3 @@
-#Конфиг для запуска марии в локальном докере команда : docker-compose (название) up -d
 version: '3.8'
 
 services:
@@ -23,6 +22,19 @@ services:
       ADMINER_DEFAULT_SERVER: mariadb
     ports:
       - "8080:8080"
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: user
+      PMA_PASSWORD: user_password
+    ports:
+      - "8081:80"
     depends_on:
       - mariadb
     restart: unless-stopped

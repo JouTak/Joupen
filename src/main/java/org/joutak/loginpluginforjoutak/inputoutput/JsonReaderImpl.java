@@ -3,6 +3,7 @@ package org.joutak.loginpluginforjoutak.inputoutput;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.joutak.loginpluginforjoutak.dto.PlayerDtos;
+import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,7 +15,7 @@ public class JsonReaderImpl implements Reader {
     private final ObjectMapper objectMapper;
 
     public JsonReaderImpl(String filepath) {
-        this.filepath = filepath;
+        this.filepath = filepath != null ? filepath : JoutakProperties.playersFilepath;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }

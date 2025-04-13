@@ -18,7 +18,7 @@ public class JsonWriterImpl implements Writer {
     private final ObjectMapper objectMapper;
 
     public JsonWriterImpl(String filepath) {
-        this.filepath = filepath;
+        this.filepath = filepath != null ? filepath : JoutakProperties.playersFilepath;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -26,7 +26,6 @@ public class JsonWriterImpl implements Writer {
     @Override
     public void write(PlayerDtos playerDtos) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filepath))) {
-            // Используем pretty printer для форматированного вывода
             String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(playerDtos);
             writer.write(json);
             log.info("Json save was completed successfully");
@@ -37,8 +36,12 @@ public class JsonWriterImpl implements Writer {
 
     @Override
     public void addNew(PlayerDto playerDto) {
-        Reader reader = new JsonReaderImpl(JoutakProperties.saveFilepath);
+        Reader reader = new JsonReaderImpl(JoutakProperties.playersFilepath);
         PlayerDtos playerDtos = reader.read();
+        if (playerDtos == null || playerDtos.getPlayerDtoList() == null) {
+            playerDtos = new PlayerDtos();
+            playerDtos.setPlayerDtoList(new java.util.ArrayList<>());
+        }
         playerDtos.getPlayerDtoList().add(playerDto);
         write(playerDtos);
     }

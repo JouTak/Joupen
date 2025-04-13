@@ -23,7 +23,7 @@ public abstract class BaseTest {
         server = MockBukkit.mock();
         player = server.addPlayer();
         player.setName(TEST_NAME);
-        JoutakProperties.saveFilepath = TEST_FILE_PATH;
+        JoutakProperties.playersFilepath = TEST_FILE_PATH;
     }
 
     @AfterEach

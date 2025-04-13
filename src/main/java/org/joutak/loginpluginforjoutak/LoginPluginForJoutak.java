@@ -6,13 +6,21 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.joutak.loginpluginforjoutak.commands.LoginAddAndRemovePlayerCommand;
 import org.joutak.loginpluginforjoutak.database.DatabaseManager;
+import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
 import org.joutak.loginpluginforjoutak.dto.PlayerDto;
 import org.joutak.loginpluginforjoutak.dto.PlayerDtos;
 import org.joutak.loginpluginforjoutak.event.PlayerJoinEventHandler;
 import org.joutak.loginpluginforjoutak.inputoutput.JsonReaderImpl;
+import org.joutak.loginpluginforjoutak.inputoutput.JsonWriterImpl;
+import org.joutak.loginpluginforjoutak.mapper.PlayerMapper;
 import org.joutak.loginpluginforjoutak.repository.PlayerRepository;
 import org.joutak.loginpluginforjoutak.repository.PlayerRepositoryFactory;
 import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
+import org.mapstruct.factory.Mappers;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 public final class LoginPluginForJoutak extends JavaPlugin {
@@ -36,23 +44,26 @@ public final class LoginPluginForJoutak extends JavaPlugin {
             if (JoutakProperties.useSql) {
                 databaseManager = new DatabaseManager();
                 this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager.getEntityManager());
-                if (!isDatabaseEmpty()) {
-                    log.info("Database has players, skipping JSON migration");
-                } else {
-                    migratePlayersFromJsonToDatabase();
-                }
             } else {
                 this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(null);
             }
-            log.info("Using profile  with repository {}",
-                    playerRepository.getClass().getSimpleName());
+            log.info("Using profile with repository {}", playerRepository.getClass().getSimpleName());
         } catch (Exception e) {
             log.error("Failed to initialize repository: {}", e.getMessage(), e);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        new LoginAddAndRemovePlayerCommand();
+        // Выполнение миграции, если установлен флаг migrate
+        if (JoutakProperties.migrate) {
+            if (JoutakProperties.useSql) {
+                migrateFromFileToDatabase();
+            } else {
+                migrateFromDatabaseToFile();
+            }
+        }
+
+        new LoginAddAndRemovePlayerCommand(playerRepository);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
 
         log.info("LoginPluginForJoutak enabled successfully!");
@@ -68,40 +79,57 @@ public final class LoginPluginForJoutak extends JavaPlugin {
         log.info("LoginPluginForJoutak disabled!");
     }
 
-    private boolean isDatabaseEmpty() {
-        if (!JoutakProperties.useSql || playerRepository == null) {
-            return true;
-        }
-        try {
-            return playerRepository.findAll().isEmpty();
-        } catch (Exception e) {
-            log.warn("Failed to check database emptiness: {}", e.getMessage());
-            return true;
-        }
-    }
-
-    private void migratePlayersFromJsonToDatabase() {
+    private void migrateFromFileToDatabase() {
         if (!JoutakProperties.useSql) {
             return;
         }
-
-        JsonReaderImpl reader = new JsonReaderImpl(JoutakProperties.saveFilepath);
+        JsonReaderImpl reader = new JsonReaderImpl(JoutakProperties.playersFilepath);
+        PlayerMapper playerMapper = Mappers.getMapper(PlayerMapper.class);
         PlayerDtos players = reader.read();
-
         if (players == null || players.getPlayerDtoList() == null || players.getPlayerDtoList().isEmpty()) {
-            log.warn("No players found in {}", JoutakProperties.saveFilepath);
+            log.info("No players found in file for migration.");
             return;
         }
-
-        for (PlayerDto player : players.getPlayerDtoList()) {
+        for (PlayerDto playerDto : players.getPlayerDtoList()) {
             try {
-                playerRepository.save(player);
-                log.info("Migrated player: {} ({})", player.getName(), player.getUuid());
+                Optional<PlayerEntity> existing = playerRepository.findByUuid(playerDto.getUuid());
+                if (existing.isPresent()) {
+                    playerMapper.updateEntityFromDto(playerDto, existing.get());
+                    playerRepository.update(playerMapper.entityToDto(existing.get()));
+                } else {
+                    playerRepository.save(playerDto);
+                }
+                log.info("Migrated player from file to database: {} ({})", playerDto.getName(), playerDto.getUuid());
             } catch (Exception e) {
-                log.warn("Failed to migrate player {}: {}", player.getName(), e.getMessage());
+                log.warn("Failed to migrate player {} to database: {}", playerDto.getName(), e.getMessage());
             }
         }
+        log.info("Migration from file to database completed.");
+    }
 
-        log.info("Player migration from JSON to MariaDB completed.");
+    private void migrateFromDatabaseToFile() {
+        if (JoutakProperties.useSql) {
+            return;
+        }
+        try {
+            DatabaseManager tempDbManager = new DatabaseManager();
+            PlayerRepository tempRepo = PlayerRepositoryFactory.getPlayerRepository(tempDbManager.getEntityManager());
+            PlayerMapper playerMapper = Mappers.getMapper(PlayerMapper.class);
+            List<PlayerEntity> entities = tempRepo.findAll();
+            if (entities.isEmpty()) {
+                log.info("No players found in database for migration.");
+                return;
+            }
+            PlayerDtos playerDtos = new PlayerDtos();
+            playerDtos.setPlayerDtoList(entities.stream()
+                    .map(playerMapper::entityToDto)
+                    .collect(Collectors.toList()));
+            JsonWriterImpl writer = new JsonWriterImpl(JoutakProperties.playersFilepath);
+            writer.write(playerDtos);
+            log.info("Migration from database to file completed.");
+            tempDbManager.disconnect();
+        } catch (Exception e) {
+            log.error("Failed to migrate from database to file: {}", e.getMessage(), e);
+        }
     }
 }

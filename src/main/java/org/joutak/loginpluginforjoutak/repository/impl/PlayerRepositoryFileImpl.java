@@ -95,12 +95,12 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     }
 
     private PlayerDtos readPlayerDtos() {
-        JsonReaderImpl reader = new JsonReaderImpl(JoutakProperties.saveFilepath);
+        JsonReaderImpl reader = new JsonReaderImpl(JoutakProperties.playersFilepath);
         return reader.read();
     }
 
     private void writePlayerDtos(PlayerDtos playerDtos) {
-        JsonWriterImpl writer = new JsonWriterImpl(JoutakProperties.saveFilepath);
+        JsonWriterImpl writer = new JsonWriterImpl(JoutakProperties.playersFilepath);
         writer.write(playerDtos);
     }
 }
