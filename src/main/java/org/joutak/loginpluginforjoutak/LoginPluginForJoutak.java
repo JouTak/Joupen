@@ -23,25 +23,28 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
-public final class LoginPluginForJoutak extends JavaPlugin {
+@Getter
+public class LoginPluginForJoutak extends JavaPlugin {
 
     @Getter
     private static LoginPluginForJoutak instance;
+    private JoutakProperties properties;
     private PlayerRepository playerRepository;
     private DatabaseManager databaseManager;
 
     @Override
     public void onEnable() {
         instance = this;
+        properties = new JoutakProperties(this);
 
-        if (!JoutakProperties.enabled) {
+        if (!properties.enabled) {
             log.error("Plugin was disabled in config. Enable it in config.yml");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         try {
-            if (JoutakProperties.useSql) {
+            if (properties.useSql) {
                 databaseManager = new DatabaseManager();
                 this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager.getEntityManager());
             } else {
@@ -54,9 +57,8 @@ public final class LoginPluginForJoutak extends JavaPlugin {
             return;
         }
 
-        // Выполнение миграции, если установлен флаг migrate
-        if (JoutakProperties.migrate) {
-            if (JoutakProperties.useSql) {
+        if (properties.migrate) {
+            if (properties.useSql) {
                 migrateFromFileToDatabase();
             } else {
                 migrateFromDatabaseToFile();
@@ -73,17 +75,17 @@ public final class LoginPluginForJoutak extends JavaPlugin {
     public void onDisable() {
         log.info("LoginPluginForJoutak disabling...");
         if (databaseManager != null) {
-            databaseManager.disconnect();
+            databaseManager.disconnect(databaseManager.getEntityManager());
             DatabaseManager.shutdown();
         }
         log.info("LoginPluginForJoutak disabled!");
     }
 
     private void migrateFromFileToDatabase() {
-        if (!JoutakProperties.useSql) {
+        if (!properties.useSql) {
             return;
         }
-        JsonReaderImpl reader = new JsonReaderImpl(JoutakProperties.playersFilepath);
+        JsonReaderImpl reader = new JsonReaderImpl(properties.playersFilepath);
         PlayerMapper playerMapper = Mappers.getMapper(PlayerMapper.class);
         PlayerDtos players = reader.read();
         if (players == null || players.getPlayerDtoList() == null || players.getPlayerDtoList().isEmpty()) {
@@ -108,7 +110,7 @@ public final class LoginPluginForJoutak extends JavaPlugin {
     }
 
     private void migrateFromDatabaseToFile() {
-        if (JoutakProperties.useSql) {
+        if (properties.useSql) {
             return;
         }
         try {
@@ -124,10 +126,10 @@ public final class LoginPluginForJoutak extends JavaPlugin {
             playerDtos.setPlayerDtoList(entities.stream()
                     .map(playerMapper::entityToDto)
                     .collect(Collectors.toList()));
-            JsonWriterImpl writer = new JsonWriterImpl(JoutakProperties.playersFilepath);
+            JsonWriterImpl writer = new JsonWriterImpl(properties.playersFilepath);
             writer.write(playerDtos);
             log.info("Migration from database to file completed.");
-            tempDbManager.disconnect();
+            tempDbManager.disconnect(databaseManager.getEntityManager());
         } catch (Exception e) {
             log.error("Failed to migrate from database to file: {}", e.getMessage(), e);
         }

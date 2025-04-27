@@ -6,7 +6,7 @@ import org.joutak.loginpluginforjoutak.dto.PlayerDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,18 +27,18 @@ public class DateTimeTest {
                 .id(1L)
                 .name("Player1")
                 .uuid(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .lastProlongDate(LocalDate.of(2025, 1, 1))
-                .validUntil(LocalDate.of(2025, 5, 18))
+                .lastProlongDate(LocalDateTime.of(2025, 1, 1, 0, 0))
+                .validUntil(LocalDateTime.of(2025, 5, 18, 0, 0))
                 .paid(true)
                 .build();
 
         String json = objectMapper.writeValueAsString(originalDto);
         System.out.println("Serialized JSON: " + json);
 
-        assertTrue(json.contains("\"lastProlongDate\":\"2025-01-01\""),
-                "lastProlongDate should be in 'yyyy-MM-dd' format");
-        assertTrue(json.contains("\"validUntil\":\"2025-05-18\""),
-                "validUntil should be in 'yyyy-MM-dd' format");
+        assertTrue(json.contains("\"lastProlongDate\":\"2025-01-01 00:00\""),
+                "lastProlongDate should be in 'yyyy-MM-dd HH:mm' format");
+        assertTrue(json.contains("\"validUntil\":\"2025-05-18 00:00\""),
+                "validUntil should be in 'yyyy-MM-dd HH:mm' format");
         assertTrue(json.contains("\"paid\":true"),
                 "paid should be present as 'paid'");
 
@@ -51,7 +51,7 @@ public class DateTimeTest {
                 "lastProlongDate should match");
         assertEquals(originalDto.getValidUntil(), deserializedDto.getValidUntil(),
                 "validUntil should match");
-        assertTrue(deserializedDto.isPaid(), "isPaid should be true"); // Исправлено
+        assertTrue(deserializedDto.isPaid(), "isPaid should be true");
     }
 
     @Test
@@ -61,8 +61,8 @@ public class DateTimeTest {
                     "id": 2,
                     "name": "Player2",
                     "uuid": "123e4567-e89b-12d3-a456-426614174000",
-                    "lastProlongDate": "2024-12-31",
-                    "validUntil": "2025-06-30",
+                    "lastProlongDate": "2024-12-31 00:00",
+                    "validUntil": "2025-06-30 00:00",
                     "paid": false
                 }
                 """;
@@ -73,10 +73,10 @@ public class DateTimeTest {
         assertEquals("Player2", dto.getName(), "Name should be Player2");
         assertEquals(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"), dto.getUuid(),
                 "UUID should match");
-        assertEquals(LocalDate.of(2024, 12, 31), dto.getLastProlongDate(),
-                "lastProlongDate should be 2024-12-31");
-        assertEquals(LocalDate.of(2025, 6, 30), dto.getValidUntil(),
-                "validUntil should be 2025-06-30");
-        assertFalse(dto.isPaid(), "isPaid should be false"); // Исправлено
+        assertEquals(LocalDateTime.of(2024, 12, 31, 0, 0), dto.getLastProlongDate(),
+                "lastProlongDate should be 2024-12-31 00:00");
+        assertEquals(LocalDateTime.of(2025, 6, 30, 0, 0), dto.getValidUntil(),
+                "validUntil should be 2025-06-30 00:00");
+        assertFalse(dto.isPaid(), "isPaid should be false");
     }
 }

@@ -1,6 +1,8 @@
 plugin:
-  saveFilepath: player.json
+  enabled: true
+  playersFile: player.json
   useSql: true
+  migrate: false
 database:
   url: jdbc:mariadb://localhost:3306/mydb
   user: user

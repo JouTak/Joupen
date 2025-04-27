@@ -3,132 +3,79 @@ package org.joutak.loginpluginforjoutak.database;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.spi.PersistenceUnitInfo;
+import jakarta.persistence.Persistence;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hibernate.jpa.HibernatePersistenceProvider;
+import org.joutak.loginpluginforjoutak.utils.HibernatePropertiesBuilder;
 import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
 
-import java.util.Collections;
 import java.util.Properties;
 
 public class DatabaseManager {
 
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
-    private static final String ERROR_USE_SQL_FALSE = "DatabaseManager is only available when useSql is true. Current value: {}";
-    private static final String ERROR_CONFIG_NOT_SET = "Database configuration is not properly set in config.yml";
-    private static final String ERROR_EMF_CREATION_FAILED = "Failed to create EntityManagerFactory";
-    private static final String INFO_INITIALIZING_EMF = "Initializing EntityManagerFactory with properties: url={}, user={}";
-    private static final String INFO_EMF_INITIALIZED = "EntityManagerFactory initialized successfully";
-    private static final String ERROR_COMMIT_FAILED = "Transaction commit failed: {}";
-
-    // Hibernate property keys
-    private static final String JDBC_URL = "jakarta.persistence.jdbc.url";
-    private static final String JDBC_USER = "jakarta.persistence.jdbc.user";
-    private static final String JDBC_PASSWORD = "jakarta.persistence.jdbc.password";
-    private static final String JDBC_DRIVER = "jakarta.persistence.jdbc.driver";
-    private static final String HIBERNATE_DIALECT = "hibernate.dialect";
-    private static final String HIBERNATE_HBM2DDL = "hibernate.hbm2ddl.auto";
-    private static final String HIBERNATE_SHOW_SQL = "hibernate.show_sql";
-    private static final String HIBERNATE_FORMAT_SQL = "hibernate.format_sql";
-    private static final String HIBERNATE_AUTODETECTION = "hibernate.archive.autodetection";
-    private static final String HIBERNATE_SEARCH_LISTENERS = "hibernate.search.autoregister_listeners";
-
-    // Persistence unit name
     private static final String PERSISTENCE_UNIT_NAME = "joutakPU";
-    private static final String PLAYER_ENTITY_CLASS = "org.joutak.loginpluginforjoutak.domain.PlayerEntity";
 
     private static EntityManagerFactory emf;
-    private final EntityManager em;
-    private final EntityTransaction transaction;
 
     public DatabaseManager() {
-        if (!JoutakProperties.useSql) {
-            logger.error(ERROR_USE_SQL_FALSE, JoutakProperties.useSql);
-            throw new IllegalStateException("DatabaseManager is only available when useSql is true");
-        }
-
-        if (JoutakProperties.dbConfig == null || JoutakProperties.dbConfig.isEmpty()) {
-            logger.error(ERROR_CONFIG_NOT_SET);
-            throw new IllegalStateException(ERROR_CONFIG_NOT_SET);
-        }
+        validateConfig();
 
         if (emf == null) {
-            Properties hibernateProps = new Properties();
-
-            // Преобразуем dbConfig в Properties с правильными ключами Hibernate
-            JoutakProperties.dbConfig.forEach((key, value) -> {
-                String hibernateKey = switch (key) {
-                    case "url" -> JDBC_URL;
-                    case "user" -> JDBC_USER;
-                    case "password" -> JDBC_PASSWORD;
-                    case "driver" -> JDBC_DRIVER;
-                    case "dialect" -> HIBERNATE_DIALECT;
-                    case "hbm2ddl" -> HIBERNATE_HBM2DDL;
-                    case "showSql" -> HIBERNATE_SHOW_SQL;
-                    case "formatSql" -> HIBERNATE_FORMAT_SQL;
-                    default -> key; // Для дополнительных параметров оставляем как есть
-                };
-                hibernateProps.setProperty(hibernateKey, String.valueOf(value));
-            });
-
-            hibernateProps.setProperty(HIBERNATE_AUTODETECTION, "class");
-            hibernateProps.setProperty(HIBERNATE_SEARCH_LISTENERS, "false");
-
-            logger.info(INFO_INITIALIZING_EMF,
-                    hibernateProps.getProperty(JDBC_URL),
-                    hibernateProps.getProperty(JDBC_USER));
-
-            PersistenceUnitInfo persistenceUnitInfo = new CustomPersistenceUnitInfo(
-                    PERSISTENCE_UNIT_NAME,
-                    Collections.singletonList(PLAYER_ENTITY_CLASS),
-                    hibernateProps
-            );
-
-            HibernatePersistenceProvider provider = new HibernatePersistenceProvider();
-            emf = provider.createContainerEntityManagerFactory(persistenceUnitInfo, hibernateProps);
-
-            if (emf == null) {
-                logger.error(ERROR_EMF_CREATION_FAILED);
-                throw new IllegalStateException(ERROR_EMF_CREATION_FAILED);
-            }
-            logger.info(INFO_EMF_INITIALIZED);
+            initializeEntityManagerFactory();
         }
-        this.em = emf.createEntityManager();
-        this.transaction = em.getTransaction();
+    }
+
+    private void validateConfig() {
+        if (!JoutakProperties.useSql) {
+            logger.error("DatabaseManager is only available when useSql is true. Current value: {}", JoutakProperties.useSql);
+            throw new IllegalStateException("DatabaseManager is only available when useSql is true");
+        }
+        if (JoutakProperties.dbConfig == null || JoutakProperties.dbConfig.isEmpty()) {
+            logger.error("Database configuration is not properly set in config.yml");
+            throw new IllegalStateException("Database configuration is not properly set in config.yml");
+        }
+    }
+
+    private void initializeEntityManagerFactory() {
+        Properties hibernateProps = HibernatePropertiesBuilder.buildFromDbConfig(JoutakProperties.dbConfig);
+
+        // Логирование для отладки
+        logger.info("Hibernate Properties: {}", hibernateProps);
+
+        logger.info("Initializing EntityManagerFactory with URL: {}, USER: {}",
+                hibernateProps.getProperty("jakarta.persistence.jdbc.url"),
+                hibernateProps.getProperty("jakarta.persistence.jdbc.user"));
+
+        emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, hibernateProps);
+
+        if (emf == null) {
+            logger.error("Failed to create EntityManagerFactory");
+            throw new IllegalStateException("Failed to create EntityManagerFactory");
+        }
+        logger.info("EntityManagerFactory initialized successfully");
     }
 
     public EntityManager getEntityManager() {
-        if (!transaction.isActive()) {
-            transaction.begin();
+        if (emf == null) {
+            throw new IllegalStateException("EntityManagerFactory is not initialized");
         }
-        return em;
+        return emf.createEntityManager();
     }
 
-    public void commit() {
-        if (transaction.isActive()) {
-            try {
-                transaction.commit();
-            } catch (Exception e) {
-                logger.error(ERROR_COMMIT_FAILED, e.getMessage(), e);
-                rollback();
-                throw e;
-            }
-        }
-    }
-
-    public void rollback() {
+    public void rollback(EntityManager em) {
+        if (em == null) return;
+        EntityTransaction transaction = em.getTransaction();
         if (transaction.isActive()) {
             transaction.rollback();
         }
     }
 
-    public void disconnect() {
+    public void disconnect(EntityManager em) {
         if (em != null && em.isOpen()) {
-            if (transaction.isActive()) {
-                rollback();
-            }
+            rollback(em);
             em.close();
+            logger.info("EntityManager closed");
         }
     }
 
@@ -136,6 +83,7 @@ public class DatabaseManager {
         if (emf != null && emf.isOpen()) {
             emf.close();
             emf = null;
+            logger.info("EntityManagerFactory closed");
         }
     }
 }

@@ -1,5 +1,6 @@
 package org.joutak.loginpluginforjoutak.commands;
 
+import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -12,12 +13,14 @@ import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
 import org.joutak.loginpluginforjoutak.dto.PlayerDto;
 import org.joutak.loginpluginforjoutak.mapper.PlayerMapper;
 import org.joutak.loginpluginforjoutak.repository.PlayerRepository;
-import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
 import org.mapstruct.factory.Mappers;
 
-import java.time.LocalDate;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.joutak.loginpluginforjoutak.enums.UUIDTypes.INITIAL_UUID;
 
@@ -120,6 +123,35 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         commandSender.sendMessage(textComponent);
     }
 
+    private Duration parseDuration(String durationStr) {
+        Pattern pattern = Pattern.compile("(\\d+)d|(\\d+)h|(\\d+)m");
+        Matcher matcher = pattern.matcher(durationStr);
+        int days = 0;
+        int hours = 0;
+        int minutes = 0;
+        while (matcher.find()) {
+            if (matcher.group(1) != null) {
+                days = Integer.parseInt(matcher.group(1));
+            } else if (matcher.group(2) != null) {
+                hours = Integer.parseInt(matcher.group(2));
+            } else if (matcher.group(3) != null) {
+                minutes = Integer.parseInt(matcher.group(3));
+            }
+        }
+        return Duration.ofDays(days).plusHours(hours).plusMinutes(minutes);
+    }
+
+    private String formatDuration(Duration duration) {
+        long days = duration.toDays();
+        long hours = duration.toHours() % 24;
+        long minutes = duration.toMinutes() % 60;
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) sb.append(days).append("d ");
+        if (hours > 0) sb.append(hours).append("h ");
+        if (minutes > 0) sb.append(minutes).append("m");
+        return sb.toString().trim();
+    }
+
     private void prolongCommand(CommandSender commandSender, String[] args, boolean gift) {
         if (checkPermission(commandSender, "joupen.admin")) return;
 
@@ -128,64 +160,83 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             return;
         }
 
-        LocalDate now = LocalDate.now();
-        int daysAmount = args.length >= 3
-                ? (args.length >= 4 && "d".equals(args[3]) ? Integer.parseInt(args[2]) : 30 * Integer.parseInt(args[2]))
-                : 30;
-
-        if ("all".equals(args[1])) {
-            List<PlayerEntity> players = playerRepository.findAll();
-            players.forEach(entity -> {
-                PlayerDto playerDto = playerMapper.entityToDto(entity);
-                if (!playerDto.isPaid() && !gift) return;
-                LocalDate validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
-                playerDto.setValidUntil(validUntil.plusDays(daysAmount));
-                try {
-                    playerRepository.update(playerDto);
-                } catch (Exception e) {
-                    log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
-                }
-            });
-            commandSender.sendMessage(Component.text("Gave everyone " + daysAmount + " days", NamedTextColor.RED));
-            return;
-        }
-
-        Optional<PlayerEntity> optionalEntity = playerRepository.findByName(args[1]);
-        PlayerDto playerDto = optionalEntity.map(playerMapper::entityToDto).orElse(null);
-        boolean isNew = playerDto == null;
-
-        if (isNew) {
-            playerDto = PlayerDto.builder()
-                    .name(args[1])
-                    .paid(!gift)
-                    .lastProlongDate(now.minusDays(1))
-                    .validUntil(now.minusDays(1))
-                    .uuid(INITIAL_UUID.getUuid())
-                    .build();
-        }
-
-        LocalDate validUntil = playerDto.getValidUntil();
-        if (validUntil.isBefore(now)) {
-            playerDto.setLastProlongDate(now);
-            validUntil = now;
-        }
-        playerDto.setValidUntil(validUntil.plusDays(daysAmount));
-
-        try {
-            if (isNew) {
-                playerRepository.save(playerDto);
-                Bukkit.broadcast(Component.text("Новый игрок " + args[1] + " впервые оплатил проходку! Ура!", NamedTextColor.AQUA));
-                commandSender.sendMessage(Component.text("Added new player to the whitelist: " + args[1], NamedTextColor.RED));
-                log.warn("Added new player to the whitelist: {}", args[1]);
-            } else {
-                playerRepository.update(playerDto);
-                Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + daysAmount + " дней. Ура!", NamedTextColor.AQUA));
-                commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
-                log.warn("Added player to the whitelist: {}", args[1]);
+        LocalDateTime now = LocalDateTime.now();
+        Duration duration;
+        if (args.length >= 3) {
+            try {
+                duration = parseDuration(args[2]);
+            } catch (Exception e) {
+                commandSender.sendMessage(Component.text("Invalid duration format. Use format like 3d2h7m", NamedTextColor.RED));
+                return;
             }
+        } else {
+            duration = Duration.ofDays(30); // Default: 1 month (30 days)
+        }
+
+        EntityManager em = playerRepository.getEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            if ("all".equals(args[1])) {
+                List<PlayerEntity> players = playerRepository.findAll();
+                players.forEach(entity -> {
+                    PlayerDto playerDto = playerMapper.entityToDto(entity);
+                    if (!playerDto.isPaid() && !gift) return;
+                    LocalDateTime validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
+                    playerDto.setValidUntil(validUntil.plus(duration));
+                    try {
+                        playerRepository.update(playerDto);
+                    } catch (Exception e) {
+                        log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
+                    }
+                });
+                commandSender.sendMessage(Component.text("Gave everyone " + formatDuration(duration) + " time", NamedTextColor.RED));
+            } else {
+                Optional<PlayerEntity> optionalEntity = playerRepository.findByName(args[1]);
+                PlayerDto playerDto = optionalEntity.map(playerMapper::entityToDto).orElse(null);
+                boolean isNew = playerDto == null;
+
+                if (isNew) {
+                    playerDto = PlayerDto.builder()
+                            .name(args[1])
+                            .paid(!gift)
+                            .lastProlongDate(now.minusDays(1))
+                            .validUntil(now.minusDays(1))
+                            .uuid(INITIAL_UUID.getUuid())
+                            .build();
+                }
+
+                LocalDateTime validUntil = playerDto.getValidUntil();
+                if (validUntil.isBefore(now)) {
+                    playerDto.setLastProlongDate(now);
+                    validUntil = now;
+                }
+                playerDto.setValidUntil(validUntil.plus(duration));
+
+                if (isNew) {
+                    playerRepository.save(playerDto);
+                    Bukkit.broadcast(Component.text("Новый игрок " + args[1] + " впервые оплатил проходку! Ура!", NamedTextColor.AQUA));
+                    commandSender.sendMessage(Component.text("Added new player to the whitelist: " + args[1], NamedTextColor.RED));
+                    log.warn("Added new player to the whitelist: {}", args[1]);
+                } else {
+                    playerRepository.update(playerDto);
+                    Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!", NamedTextColor.AQUA));
+                    commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
+                    log.warn("Added player to the whitelist: {}", args[1]);
+                }
+            }
+
+            em.getTransaction().commit();
         } catch (Exception e) {
-            log.error("Failed to save/update player {}: {}", args[1], e.getMessage());
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            log.error("Failed to process prolong command for {}: {}", args[1], e.getMessage());
             commandSender.sendMessage(Component.text("Error saving player data. Contact administrator.", NamedTextColor.RED));
+        } finally {
+            if (em.isOpen()) {
+                em.close();
+            }
         }
     }
 

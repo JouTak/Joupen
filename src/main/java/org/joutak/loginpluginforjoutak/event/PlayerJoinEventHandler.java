@@ -15,6 +15,7 @@ import org.joutak.loginpluginforjoutak.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,7 +56,7 @@ public class PlayerJoinEventHandler implements Listener {
         PlayerDto playerDto = playerMapper.entityToDto(playerEntity);
 
         // Проверка срока действия подписки
-        if (playerDto.getValidUntil().isBefore(LocalDate.now())) {
+        if (playerDto.getValidUntil().isBefore(LocalDateTime.now())) {
             TextComponent textComponent = Component.text()
                     .append(Component.text("Проходка кончилась((( Надо оплатить и написать ", NamedTextColor.BLUE))
                     .append(Component.text("EnderDiss'e", NamedTextColor.RED))
@@ -67,8 +68,8 @@ public class PlayerJoinEventHandler implements Listener {
         // Обновление UUID и продление подписки
         UUID uuid = playerDto.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
-            LocalDate now = LocalDate.now();
-            LocalDate validUntil = playerDto.getValidUntil()
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime validUntil = playerDto.getValidUntil()
                     .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
             playerDto.setValidUntil(validUntil);
             playerDto.setLastProlongDate(now);

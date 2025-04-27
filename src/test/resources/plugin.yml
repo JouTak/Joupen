@@ -1,0 +1,12 @@
+name: LoginPluginForJoutak
+version: 1.0-SNAPSHOT
+main: org.joutak.loginpluginforjoutak.LoginPluginForJoutak
+api-version: 1.20
+commands:
+  joupen:
+    description: Whitelist management command
+    usage: /<command> [help|info|prolong|gift|link]
+permissions:
+  joupen.admin:
+    description: Allows prolonging and gifting whitelist access
+    default: op

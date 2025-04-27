@@ -1,5 +1,6 @@
 package org.joutak.loginpluginforjoutak.repository.impl;
 
+import jakarta.persistence.EntityManager;
 import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
 import org.joutak.loginpluginforjoutak.dto.PlayerDto;
 import org.joutak.loginpluginforjoutak.dto.PlayerDtos;
@@ -83,6 +84,11 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
                 }
             }
         }
+    }
+
+    @Override
+    public EntityManager getEntityManager() {
+        return null;
     }
 
     @Override

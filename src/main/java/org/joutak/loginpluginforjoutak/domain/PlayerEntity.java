@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -23,13 +26,14 @@ public class PlayerEntity {
     private String name;
 
     @Column(name = "uuid", nullable = false, unique = true, length = 36)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID uuid;
 
     @Column(name = "last_prolong_date")
-    private LocalDate lastProlongDate;
+    private LocalDateTime lastProlongDate;
 
     @Column(name = "valid_until")
-    private LocalDate validUntil;
+    private LocalDateTime validUntil;
 
     @Column(name = "paid", nullable = false)
     private Boolean paid;

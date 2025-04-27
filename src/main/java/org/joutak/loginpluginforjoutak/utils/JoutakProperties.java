@@ -1,98 +1,108 @@
 package org.joutak.loginpluginforjoutak.utils;
 
-import org.yaml.snakeyaml.Yaml;
+import org.joutak.loginpluginforjoutak.LoginPluginForJoutak;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.time.format.DateTimeFormatter;
+import java.io.IOException;
 import java.util.Map;
 
 public final class JoutakProperties {
 
-    public static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    public static final String CONFIG_DIR = "plugins/joupen";
-    public static final String CONFIG_FILE = CONFIG_DIR + "/config.yml";
-    public static final String DEFAULT_PLAYERS_FILE = "players.json";
+    private static final Logger LOGGER = LoggerFactory.getLogger(JoutakProperties.class);
+    private final LoginPluginForJoutak plugin;
     public static String playersFilepath;
-    public static final Boolean useSql;
-    public static final Boolean migrate;
+    public static Boolean useSql;
+    public static Boolean migrate;
     public static Boolean enabled = Boolean.TRUE;
-    public static final Map<String, Object> dbConfig;
+    public static Map<String, Object> dbConfig;
 
-    static {
-        File configDir = new File(CONFIG_DIR);
+    public JoutakProperties(LoginPluginForJoutak plugin) {
+        this.plugin = plugin;
+        loadConfig();
+    }
+
+    private void loadConfig() {
+        File configDir = plugin.getDataFolder();
+        LOGGER.info("Plugin data folder: {}", configDir.getAbsolutePath());
+        FileUtils.ensureDirectoryExists(configDir);
         if (!configDir.exists()) {
-            configDir.mkdirs();
+            LOGGER.error("Failed to create plugin data folder: {}", configDir.getAbsolutePath());
+            throw new IllegalStateException("Plugin data folder does not exist: " + configDir.getAbsolutePath());
         }
 
-        Yaml yaml = new Yaml();
-        File configFile = new File(CONFIG_FILE);
-
+        File configFile = new File(configDir, "config.yml");
+        LOGGER.info("Checking config file: {}", configFile.getAbsolutePath());
         if (!configFile.exists()) {
+            LOGGER.info("Config file does not exist, creating default config.yml");
             createDefaultConfig(configFile);
+        } else {
+            LOGGER.info("Config file already exists: {}", configFile.getAbsolutePath());
         }
 
-        Map<String, Object> config = loadYamlConfig(yaml, configFile);
-
-        if (config == null) {
-            throw new IllegalStateException("No configuration found in " + CONFIG_FILE);
-        }
+        Map<String, Object> config = loadYaml(configFile);
+        LOGGER.info("Loaded config: {}", config);
 
         Map<String, Object> pluginConfig = (Map<String, Object>) config.getOrDefault("plugin", Map.of());
-        String playersFile = (String) pluginConfig.getOrDefault("playersFile", DEFAULT_PLAYERS_FILE);
-        // Проверка на недопустимые пути
-        if (playersFile.contains("..") || new File(playersFile).isAbsolute()) {
-            throw new IllegalArgumentException("Invalid playersFile path: " + playersFile + ". Path must be relative and within " + CONFIG_DIR);
-        }
-        playersFilepath = CONFIG_DIR + "/" + playersFile;
-
+        playersFilepath = new File(configDir, (String) pluginConfig.getOrDefault("saveFilepath", "player.json")).getPath();
         useSql = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("useSql", false)));
         migrate = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("migrate", false)));
         enabled = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("enabled", true)));
+        LOGGER.info("Plugin config: playersFilepath={}, useSql={}, migrate={}, enabled={}",
+                playersFilepath, useSql, migrate, enabled);
 
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
+            LOGGER.info("Database config: {}", dbConfig);
         } else {
             dbConfig = null;
+            LOGGER.info("SQL disabled, dbConfig set to null");
         }
     }
 
-    private static Map<String, Object> loadYamlConfig(Yaml yaml, File configFile) {
-        try (InputStream inputStream = new FileInputStream(configFile)) {
-            return yaml.load(inputStream);
-        } catch (Exception e) {
-            System.err.println("Failed to load " + configFile.getPath() + ": " + e.getMessage());
-            return null;
+    private Map<String, Object> loadYaml(File configFile) {
+        try {
+            if (!configFile.exists()) {
+                LOGGER.error("Config file does not exist: {}", configFile.getAbsolutePath());
+                throw new IllegalStateException("Config file does not exist: " + configFile.getAbsolutePath());
+            }
+            LOGGER.info("Loading YAML from: {}", configFile.getAbsolutePath());
+            return YamlUtils.loadYaml(configFile);
+        } catch (IOException e) {
+            LOGGER.error("Failed to load config.yml: {}", configFile.getAbsolutePath(), e);
+            throw new IllegalStateException("Failed to load config.yml", e);
         }
     }
 
-    private static void createDefaultConfig(File configFile) {
-        try (FileWriter writer = new FileWriter(configFile)) {
-            String defaultConfig =
-                    "plugin:\n" +
-                            "  enabled: true\n" +
-                            "  playersFile: players.json\n" +
-                            "  useSql: false\n" +
-                            "  migrate: false\n" +
-                            "database:\n" +
-                            "  url: jdbc:mariadb://localhost:3306/mydb\n" +
-                            "  user: user\n" +
-                            "  password: user_password\n" +
-                            "  driver: org.mariadb.jdbc.Driver\n" +
-                            "  dialect: org.hibernate.dialect.MariaDBDialect\n" +
-                            "  hbm2ddl: update\n" +
-                            "  showSql: true\n" +
-                            "  formatSql: true\n";
-            writer.write(defaultConfig);
-            System.out.println("Created default config file at " + configFile.getPath());
-        } catch (Exception e) {
-            System.err.println("Failed to create default config file: " + e.getMessage());
+    private void createDefaultConfig(File configFile) {
+        LOGGER.info("Creating default config at: {}", configFile.getAbsolutePath());
+        String defaultContent = """
+                plugin:
+                  enabled: true
+                  saveFilepath: player.json
+                  useSql: true
+                  migrate: false
+                database:
+                  url: jdbc:mariadb://localhost:3306/mydb
+                  user: user
+                  password: user_password
+                  driver: org.mariadb.jdbc.Driver
+                  dialect: org.hibernate.dialect.MariaDBDialect
+                  hbm2ddl: validate
+                  showSql: true
+                  formatSql: true
+                """;
+        try {
+            if (configFile.exists()) {
+                LOGGER.info("Config file already exists, skipping creation: {}", configFile.getAbsolutePath());
+                return;
+            }
+            YamlUtils.createDefaultYaml(configFile, defaultContent);
+            LOGGER.info("Successfully created default config.yml");
+        } catch (IOException e) {
+            LOGGER.error("Failed to create default config.yml: {}", configFile.getAbsolutePath(), e);
+            throw new IllegalStateException("Failed to create default config.yml", e);
         }
-    }
-
-    private JoutakProperties() {
-        throw new UnsupportedOperationException("Utility class");
     }
 }

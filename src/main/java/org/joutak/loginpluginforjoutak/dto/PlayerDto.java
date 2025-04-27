@@ -5,6 +5,7 @@ import lombok.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -21,11 +22,11 @@ public class PlayerDto {
 
     private UUID uuid;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate lastProlongDate;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
+    private LocalDateTime lastProlongDate;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate validUntil;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
+    private LocalDateTime validUntil;
 
     private boolean paid = true;
 }

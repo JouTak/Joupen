@@ -3,23 +3,18 @@ package event;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
 import org.joutak.loginpluginforjoutak.dto.PlayerDto;
-import org.joutak.loginpluginforjoutak.dto.PlayerDtos;
 import org.joutak.loginpluginforjoutak.event.PlayerJoinEventHandler;
-import org.joutak.loginpluginforjoutak.inputoutput.JsonReaderImpl;
-import org.joutak.loginpluginforjoutak.inputoutput.JsonWriterImpl;
 import org.joutak.loginpluginforjoutak.repository.PlayerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.time.LocalDate;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class PlayerJoinEventTest extends BaseTest {
@@ -59,8 +54,9 @@ public class PlayerJoinEventTest extends BaseTest {
         PlayerEntity playerEntity = new PlayerEntity();
         playerEntity.setUuid(playerUuid);
         playerEntity.setName(TEST_NAME);
-        playerEntity.setValidUntil(LocalDate.now().minusDays(1));
-        playerEntity.setLastProlongDate(LocalDate.now().minusDays(30));
+        playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
+        playerEntity.setLastProlongDate(LocalDateTime.now().minusDays(30));
+        playerEntity.setPaid(true);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
 
@@ -80,10 +76,12 @@ public class PlayerJoinEventTest extends BaseTest {
         PlayerEntity playerEntity = new PlayerEntity();
         playerEntity.setUuid(TEST_UUID);
         playerEntity.setName(TEST_NAME);
-        LocalDate lastProlongDate = LocalDate.now().minusDays(20);
-        LocalDate validUntil = LocalDate.now().plusDays(10);
+
+        LocalDateTime lastProlongDate = LocalDateTime.now().minusDays(20).withSecond(0).withNano(0);
+        LocalDateTime validUntil = LocalDateTime.now().plusDays(10).withSecond(0).withNano(0);
         playerEntity.setValidUntil(validUntil);
         playerEntity.setLastProlongDate(lastProlongDate);
+        playerEntity.setPaid(true);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
 
@@ -95,9 +93,13 @@ public class PlayerJoinEventTest extends BaseTest {
         PlayerDto updatedDto = captor.getValue();
 
         assertEquals(playerUuid, updatedDto.getUuid());
-        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(lastProlongDate, LocalDate.now());
+
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(lastProlongDate.toLocalDate(), LocalDateTime.now().toLocalDate());
         assertEquals(validUntil.plusDays(daysBetween), updatedDto.getValidUntil());
-        assertEquals(LocalDate.now(), updatedDto.getLastProlongDate());
+
+        // Проверка только даты, без учёта времени
+        assertEquals(LocalDateTime.now().withSecond(0).withNano(0).withHour(0).withMinute(0),
+                updatedDto.getLastProlongDate().withHour(0).withMinute(0).withSecond(0).withNano(0));
 
         assertEquals(PlayerLoginEvent.Result.ALLOWED, event.getResult());
 
@@ -111,8 +113,9 @@ public class PlayerJoinEventTest extends BaseTest {
         PlayerEntity playerEntity = new PlayerEntity();
         playerEntity.setUuid(playerUuid);
         playerEntity.setName(TEST_NAME);
-        playerEntity.setValidUntil(LocalDate.now().plusDays(10));
-        playerEntity.setLastProlongDate(LocalDate.now().minusDays(20));
+        playerEntity.setValidUntil(LocalDateTime.now().plusDays(10));
+        playerEntity.setLastProlongDate(LocalDateTime.now().minusDays(20));
+        playerEntity.setPaid(true);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
 
@@ -124,5 +127,4 @@ public class PlayerJoinEventTest extends BaseTest {
         verify(playerRepository).findByUuid(playerUuid);
         verifyNoMoreInteractions(playerRepository);
     }
-
 }
