@@ -75,8 +75,7 @@ public class LoginPluginForJoutak extends JavaPlugin {
     public void onDisable() {
         log.info("LoginPluginForJoutak disabling...");
         if (databaseManager != null) {
-            databaseManager.disconnect(databaseManager.getEntityManager());
-            DatabaseManager.shutdown();
+            databaseManager.close();
         }
         log.info("LoginPluginForJoutak disabled!");
     }
@@ -129,7 +128,7 @@ public class LoginPluginForJoutak extends JavaPlugin {
             JsonWriterImpl writer = new JsonWriterImpl(properties.playersFilepath);
             writer.write(playerDtos);
             log.info("Migration from database to file completed.");
-            tempDbManager.disconnect(databaseManager.getEntityManager());
+            tempDbManager.close();
         } catch (Exception e) {
             log.error("Failed to migrate from database to file: {}", e.getMessage(), e);
         }

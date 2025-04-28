@@ -7,6 +7,7 @@ import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,9 +19,8 @@ public class PurpurIntegrationTest extends BasePurpurIntegrationTest {
         executeCommandAsAdmin("joupen prolong " + playerName + " 30d");
 
         // Проверяем базу данных
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("joutakPU");
-        EntityManager em = emf.createEntityManager();
-        try {
+        try (EntityManagerFactory emf = createEntityManagerFactory();
+             EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
             PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
                     .setParameter("name", playerName)
@@ -31,9 +31,6 @@ public class PurpurIntegrationTest extends BasePurpurIntegrationTest {
             assertNotNull(playerEntity.getLastProlongDate(), "Дата продления не должна быть null");
             assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()), "Подписка должна быть действительной");
             em.getTransaction().commit();
-        } finally {
-            em.close();
-            emf.close();
         }
     }
 
@@ -56,19 +53,15 @@ public class PurpurIntegrationTest extends BasePurpurIntegrationTest {
         executeCommandAsAdmin("joupen prolong " + playerName + " 1d");
 
         // Устанавливаем истёкшую подписку
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("joutakPU");
-        EntityManager em = emf.createEntityManager();
-        try {
+        try (EntityManagerFactory emf = createEntityManagerFactory();
+             EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
             PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
                     .setParameter("name", playerName)
                     .getSingleResult();
-            playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
+            playerEntity.setValidUntil(playerEntity.getValidUntil().minusDays(2));
             em.merge(playerEntity);
             em.getTransaction().commit();
-        } finally {
-            em.close();
-            emf.close();
         }
 
         // Эмулируем подключение игрока
@@ -77,5 +70,18 @@ public class PurpurIntegrationTest extends BasePurpurIntegrationTest {
         // Проверяем, что игрок не в белом списке
         String response = rconClient.sendCommand("whitelist list");
         assertFalse(response.contains(playerName), "Игрок не должен быть в белом списке");
+    }
+
+    private EntityManagerFactory createEntityManagerFactory() {
+        Properties properties = new Properties();
+        properties.setProperty("jakarta.persistence.jdbc.url", mariaDB.getJdbcUrl());
+        properties.setProperty("jakarta.persistence.jdbc.user", mariaDB.getUsername());
+        properties.setProperty("jakarta.persistence.jdbc.password", mariaDB.getPassword());
+        properties.setProperty("jakarta.persistence.jdbc.driver", mariaDB.getDriverClassName());
+        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.MariaDBDialect");
+        properties.setProperty("hibernate.hbm2ddl.auto", "validate");
+        properties.setProperty("hibernate.show_sql", "true");
+        properties.setProperty("hibernate.format_sql", "true");
+        return Persistence.createEntityManagerFactory("joutakPU", properties);
     }
 }

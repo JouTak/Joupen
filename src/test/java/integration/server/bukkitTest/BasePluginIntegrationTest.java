@@ -3,7 +3,7 @@ package integration.server.bukkitTest;
 import be.seeseemelk.mockbukkit.MockBukkit;
 import be.seeseemelk.mockbukkit.ServerMock;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
-import jakarta.persistence.EntityManager;
+import integration.server.BaseMariaDBContainer;
 import liquibase.Liquibase;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
@@ -13,46 +13,39 @@ import org.joutak.loginpluginforjoutak.LoginPluginForJoutak;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.containers.MariaDBContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
 
 @Testcontainers
 public abstract class BasePluginIntegrationTest {
-
-    @Container
-    protected static final MariaDBContainer<?> mariaDB = new MariaDBContainer<>(DockerImageName.parse("mariadb:10.11"))
-            .withDatabaseName("mydb")
-            .withUsername("user")
-            .withPassword("user_password")
-            .waitingFor(Wait.forLogMessage(".*ready for connections.*", 1)
-                    .withStartupTimeout(java.time.Duration.ofSeconds(60)));
 
     protected static ServerMock server;
     protected static LoginPluginForJoutak plugin;
     protected static List<String> capturedMessages;
     protected static File testDir;
+    protected static BaseMariaDBContainer baseMariaDBContainer = new BaseMariaDBContainer();
 
     @BeforeAll
     static void setUp() throws Exception {
         server = MockBukkit.mock();
         capturedMessages = new ArrayList<>();
 
-        mariaDB.start();
-        String mariaDbJdbcUrl = mariaDB.getJdbcUrl();
+        baseMariaDBContainer.mariaDB.start();
+        String mariaDbJdbcUrl = baseMariaDBContainer.mariaDB.getJdbcUrl();
         System.out.println("MariaDB JDBC URL: " + mariaDbJdbcUrl);
 
         Database database = DatabaseFactory.getInstance()
-                .findCorrectDatabaseImplementation(new JdbcConnection(mariaDB.createConnection("")));
+                .findCorrectDatabaseImplementation(new JdbcConnection(baseMariaDBContainer.mariaDB.createConnection("")));
         Liquibase liquibase = new Liquibase(
                 "db/changelog/db.changelog-master.yaml",
                 new ClassLoaderResourceAccessor(),
@@ -110,32 +103,12 @@ public abstract class BasePluginIntegrationTest {
             server.getPluginManager().disablePlugin(plugin);
         }
         MockBukkit.unmock();
-        mariaDB.stop();
+        baseMariaDBContainer.mariaDB.stop();
     }
 
     @BeforeEach
-    void cleanUpDatabase() {
-        if (plugin == null || plugin.getDatabaseManager() == null) {
-            return;
-        }
-        EntityManager em = plugin.getDatabaseManager().getEntityManager();
-        try {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            em.getTransaction().begin();
-            em.createNativeQuery("TRUNCATE TABLE players").executeUpdate();
-            em.getTransaction().commit();
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw new RuntimeException("Не удалось очистить базу данных", e);
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
+    public void cleanUpDatabase() {
+        baseMariaDBContainer.cleanUpDatabase();
     }
 
     protected PlayerMock createAdminPlayer() {

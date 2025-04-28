@@ -9,7 +9,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class PlayerEntityCRUDTest extends BaseMariaDBTest {
+public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
 
     @Test
     void testCreatePlayer() {

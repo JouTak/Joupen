@@ -15,7 +15,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public abstract class BaseMariaDBTest {
+public abstract class BaseCrudMariaDBTest {
 
     @Container
     protected static final MariaDBContainer<?> mariaDB = new MariaDBContainer<>("mariadb:10.11")
