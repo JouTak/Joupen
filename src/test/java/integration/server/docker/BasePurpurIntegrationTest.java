@@ -7,11 +7,11 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.OutputFrame;
@@ -27,7 +27,7 @@ import java.time.Duration;
 @Testcontainers
 public abstract class BasePurpurIntegrationTest extends BaseMariaDBContainer {
 
-    private static final Logger LOGGER =  LogManager.getLogger(BasePurpurIntegrationTest.class);
+    private static final Logger LOGGER = LogManager.getLogger(BasePurpurIntegrationTest.class);
     private static final Network network = Network.newNetwork();
     protected static RconClient rconClient;
 
@@ -52,13 +52,15 @@ public abstract class BasePurpurIntegrationTest extends BaseMariaDBContainer {
 
     protected static final GenericContainer<?> purpurServer = new GenericContainer<>(DockerImageName.parse("itzg/minecraft-server:latest"))
             .withNetwork(network)
+            .withNetworkAliases("purpur-server")
             .withExposedPorts(25565, 25575)
             .withEnv("EULA", "TRUE")
             .withEnv("TYPE", "PURPUR")
-            .withEnv("VERSION", "1.20.2")
+            .withEnv("VERSION", "1.20.4")
             .withEnv("MEMORY", "3G")
             .withEnv("ENABLE_COMMAND_BLOCK", "TRUE")
             .withEnv("ONLINE_MODE", "FALSE")
+            .withEnv("WHITELIST", "TRUE")
             .withEnv("ENFORCE_WHITELIST", "TRUE")
             .withEnv("RCON_ENABLED", "TRUE")
             .withEnv("RCON_PASSWORD", "testpassword")
@@ -75,7 +77,6 @@ public abstract class BasePurpurIntegrationTest extends BaseMariaDBContainer {
             )
             .dependsOn(mariaDB)
             .withLogConsumer(new CustomLogConsumer(LOGGER, "PurpurServer"));
-
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -116,6 +117,20 @@ public abstract class BasePurpurIntegrationTest extends BaseMariaDBContainer {
         try {
             purpurServer.start();
             LOGGER.info("Purpur server started successfully");
+
+            // Проверяем server.properties
+            String serverProperties = purpurServer.execInContainer("cat", "/data/server.properties").getStdout();
+            LOGGER.info("server.properties: {}", serverProperties);
+
+            // Принудительно включаем whitelist
+            purpurServer.execInContainer("sed", "-i", "s/white-list=.*/white-list=true/", "/data/server.properties");
+            purpurServer.execInContainer("sed", "-i", "s/enforce-whitelist=.*/enforce-whitelist=true/", "/data/server.properties");
+
+            // Перезагружаем сервер через RCON
+            rconClient = RconClient.open(purpurServer.getHost(), purpurServer.getMappedPort(25575), "testpassword");
+            rconClient.sendCommand("reload");
+            Thread.sleep(5000);
+            LOGGER.info("Purpur server reloaded with updated whitelist settings");
         } catch (Exception e) {
             LOGGER.error("Failed to start Purpur server: {}", purpurServer.getLogs());
             throw e;
@@ -158,7 +173,36 @@ public abstract class BasePurpurIntegrationTest extends BaseMariaDBContainer {
     }
 
     protected void simulatePlayerLogin(String playerName) {
-        String response = rconClient.sendCommand("whitelist add " + playerName);
-        LOGGER.info("Whitelist add response: {}", response);
+        LOGGER.info("Simulating player login for {}", playerName);
+
+        try (GenericContainer<?> minecraftClient = new GenericContainer<>(DockerImageName.parse("ubuntu:20.04"))
+                .withNetwork(network)
+                .withFileSystemBind(Paths.get("src/test/resources/mcc").toAbsolutePath().toString(), "/app")
+                .withCopyFileToContainer(
+                        MountableFile.forHostPath(Paths.get("src/test/resources/mcc/MinecraftClient-20241227-281-linux-x64")),
+                        "/app/MCC"
+                )
+                .withCommand("sh", "-c",
+                        "chmod +x /app/MCC && " +
+                                "/app/MCC -s purpur-server -p 25565 -u " + playerName + " -o --script /app/disconnect_script.txt")
+                .withStartupTimeout(Duration.ofSeconds(120))
+                .withLogConsumer(new CustomLogConsumer(LOGGER, "MinecraftClient"))) {
+            minecraftClient.start();
+            // Дождитесь завершения контейнера
+            minecraftClient.followOutput(new CustomLogConsumer(LOGGER, "MinecraftClient"), OutputFrame.OutputType.STDOUT, OutputFrame.OutputType.STDERR);
+            // Получите код выхода
+            Integer exitCode = minecraftClient.getCurrentContainerInfo().getState().getExitCode();
+            LOGGER.info("Container exited with code: {}", exitCode);
+            // Получите логи
+            String clientLogs = minecraftClient.getLogs();
+            LOGGER.info("Client logs:\n{}", clientLogs);
+            // Проверьте, есть ли в логах нужное сообщение
+            if (!clientLogs.contains("Disconnected from server")) {
+                throw new AssertionError("Expected log message 'Disconnected from server' not found");
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to simulate player login for {}: {}", playerName, e.getMessage(), e);
+            throw new RuntimeException("Failed to simulate player login", e);
+        }
     }
 }

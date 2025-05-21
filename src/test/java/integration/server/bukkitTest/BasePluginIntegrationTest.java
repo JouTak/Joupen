@@ -14,16 +14,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 
 @Testcontainers
@@ -37,13 +35,16 @@ public abstract class BasePluginIntegrationTest {
 
     @BeforeAll
     static void setUp() throws Exception {
+        // Мокаем сервер и инициализируем список сообщений
         server = MockBukkit.mock();
         capturedMessages = new ArrayList<>();
 
+        // Запускаем контейнер MariaDB и получаем JDBC URL
         baseMariaDBContainer.mariaDB.start();
         String mariaDbJdbcUrl = baseMariaDBContainer.mariaDB.getJdbcUrl();
         System.out.println("MariaDB JDBC URL: " + mariaDbJdbcUrl);
 
+        // Настраиваем базу данных и применяем миграции через Liquibase
         Database database = DatabaseFactory.getInstance()
                 .findCorrectDatabaseImplementation(new JdbcConnection(baseMariaDBContainer.mariaDB.createConnection("")));
         Liquibase liquibase = new Liquibase(
@@ -53,9 +54,11 @@ public abstract class BasePluginIntegrationTest {
         );
         liquibase.update("");
 
+        // Создаем временную директорию для тестов
         Path tempDir = Files.createTempDirectory("mockbukkit-test");
         testDir = tempDir.toFile();
 
+        // Проверяем наличие исходных файлов конфигурации
         Path configPath = Path.of("src/test/resources/joupen/config.yml").toAbsolutePath();
         Path playersJsonPath = Path.of("src/test/resources/joupen/player.json").toAbsolutePath();
 
@@ -63,25 +66,27 @@ public abstract class BasePluginIntegrationTest {
             throw new IllegalStateException("Требуемые тестовые файлы не найдены");
         }
 
+        // Парсим YAML и обновляем URL базы данных
+        Yaml yaml = new Yaml();
+        String configContent = Files.readString(configPath);
+        Map<String, Object> config = yaml.load(configContent);
+        Map<String, Object> databaseConfig = (Map<String, Object>) config.get("database");
+        databaseConfig.put("url", mariaDbJdbcUrl); // Устанавливаем правильный URL
+
         // Загружаем плагин
         plugin = MockBukkit.load(LoginPluginForJoutak.class);
 
-        // Настраиваем папку данных и файлы конфигурации
+        // Настраиваем папку данных плагина
         File pluginDataFolder = plugin.getDataFolder();
         if (!pluginDataFolder.exists()) {
             pluginDataFolder.mkdirs();
         }
 
-        // Копируем config.yml и патчим URL
-        String configContent = Files.readString(configPath);
-        String updatedConfigContent = configContent.replace(
-                "jdbc:mariadb://localhost:3306/mydb",
-                mariaDbJdbcUrl
-        );
-
-        Files.writeString(pluginDataFolder.toPath().resolve("config.yml"), updatedConfigContent);
+        // Записываем обновленный config.yml и копируем player.json
+        Files.writeString(pluginDataFolder.toPath().resolve("config.yml"), yaml.dump(config));
         Files.copy(playersJsonPath, pluginDataFolder.toPath().resolve("player.json"), StandardCopyOption.REPLACE_EXISTING);
 
+        // Выводим отладочную информацию
         System.out.println("Config.yml content: " + Files.readString(pluginDataFolder.toPath().resolve("config.yml")));
         System.out.println("Plugin dataFolder: " + plugin.getDataFolder().getAbsolutePath());
         System.out.println("Files in dataFolder: " + Arrays.toString(pluginDataFolder.list()));
@@ -89,10 +94,12 @@ public abstract class BasePluginIntegrationTest {
         // Активируем плагин
         server.getPluginManager().enablePlugin(plugin);
 
+        // Проверяем, что плагин успешно активирован
         if (!plugin.isEnabled()) {
             throw new IllegalStateException("Не удалось активировать плагин");
         }
 
+        // Настраиваем белый список
         server.setWhitelist(true);
         server.setWhitelistEnforced(true);
     }
