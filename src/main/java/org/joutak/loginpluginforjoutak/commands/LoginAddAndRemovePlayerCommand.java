@@ -8,18 +8,18 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
-import org.joutak.loginpluginforjoutak.dto.PlayerDto;
-import org.joutak.loginpluginforjoutak.mapper.PlayerMapper;
-import org.joutak.loginpluginforjoutak.repository.PlayerRepository;
-import org.joutak.loginpluginforjoutak.utils.JoutakProperties;
-import org.mapstruct.factory.Mappers;
+import org.joutak.loginpluginforjoutak.logic.dto.PlayerDto;
+import org.joutak.loginpluginforjoutak.logic.dto.PlayerDtos;
+import org.joutak.loginpluginforjoutak.logic.dto.converter.PlayerDtoCalendarConverter;
+import org.joutak.loginpluginforjoutak.logic.dto.utils.PlayerDtosUtils;
+import org.joutak.loginpluginforjoutak.logic.inputoutput.JsonReaderImpl;
+import org.joutak.loginpluginforjoutak.logic.inputoutput.JsonWriterImpl;
+import org.joutak.loginpluginforjoutak.logic.inputoutput.Reader;
+import org.joutak.loginpluginforjoutak.logic.inputoutput.Writer;
+import org.joutak.loginpluginforjoutak.utils.JoutakLoginProperties;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
-
-import static org.joutak.loginpluginforjoutak.enums.UUIDTypes.INITIAL_UUID;
 
 @Slf4j
 public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
@@ -36,7 +36,9 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
     @Override
     public void execute(CommandSender commandSender, Command command, String string, String[] args) {
         if (args.length < 1) {
-            commandSender.sendMessage(Component.text("Wrong amount of arguments. Try /joupen help", NamedTextColor.GOLD));
+            TextComponent textComponent = Component.text("Wrong amount of arguments. Try /joupen help", NamedTextColor.GOLD)
+                    .toBuilder().build();
+            commandSender.sendMessage(textComponent);
             return;
         }
 
