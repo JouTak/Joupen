@@ -1,7 +1,7 @@
 package integration.mariadb;
 
 import org.hibernate.Session;
-import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
+import org.joupen.domain.PlayerEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

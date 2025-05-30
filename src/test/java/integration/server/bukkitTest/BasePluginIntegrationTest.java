@@ -9,7 +9,7 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
-import org.joutak.loginpluginforjoutak.LoginPluginForJoutak;
+import org.joupen.JoupenPlugin;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +28,7 @@ import java.util.*;
 public abstract class BasePluginIntegrationTest {
 
     protected static ServerMock server;
-    protected static LoginPluginForJoutak plugin;
+    protected static JoupenPlugin plugin;
     protected static List<String> capturedMessages;
     protected static File testDir;
     protected static BaseMariaDBContainer baseMariaDBContainer = new BaseMariaDBContainer();
@@ -74,7 +74,7 @@ public abstract class BasePluginIntegrationTest {
         databaseConfig.put("url", mariaDbJdbcUrl); // Устанавливаем правильный URL
 
         // Загружаем плагин
-        plugin = MockBukkit.load(LoginPluginForJoutak.class);
+        plugin = MockBukkit.load(JoupenPlugin.class);
 
         // Настраиваем папку данных плагина
         File pluginDataFolder = plugin.getDataFolder();

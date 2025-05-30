@@ -3,7 +3,7 @@ package integration.server.bukkitTest;
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
 import jakarta.persistence.EntityManager;
 import org.bukkit.event.player.PlayerLoginEvent;
-import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
+import org.joupen.domain.PlayerEntity;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;

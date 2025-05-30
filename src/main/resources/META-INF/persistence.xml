@@ -3,7 +3,7 @@
              version="3.0">
     <persistence-unit name="joutakPU">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-        <class>org.joutak.loginpluginforjoutak.domain.PlayerEntity</class>
+        <class>org.joupen.domain.PlayerEntity</class>
 
         <properties>
             <!-- Эти значения будут переопределены динамически через Java код -->

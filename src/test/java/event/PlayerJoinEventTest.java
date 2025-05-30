@@ -1,10 +1,10 @@
 package event;
 
 import org.bukkit.event.player.PlayerLoginEvent;
-import org.joutak.loginpluginforjoutak.domain.PlayerEntity;
-import org.joutak.loginpluginforjoutak.dto.PlayerDto;
-import org.joutak.loginpluginforjoutak.event.PlayerJoinEventHandler;
-import org.joutak.loginpluginforjoutak.repository.PlayerRepository;
+import org.joupen.domain.PlayerEntity;
+import org.joupen.dto.PlayerDto;
+import org.joupen.event.PlayerJoinEventHandler;
+import org.joupen.repository.PlayerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

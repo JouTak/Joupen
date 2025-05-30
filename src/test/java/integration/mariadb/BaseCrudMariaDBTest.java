@@ -7,6 +7,7 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+import org.joupen.domain.PlayerEntity;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +52,7 @@ public abstract class BaseCrudMariaDBTest {
         configuration.setProperty("hibernate.hbm2ddl.auto", "validate");
         configuration.setProperty("hibernate.show_sql", "true");
         configuration.setProperty("hibernate.format_sql", "true");
-        configuration.addAnnotatedClass(org.joutak.loginpluginforjoutak.domain.PlayerEntity.class);
+        configuration.addAnnotatedClass(PlayerEntity.class);
 
         sessionFactory = configuration.buildSessionFactory();
     }

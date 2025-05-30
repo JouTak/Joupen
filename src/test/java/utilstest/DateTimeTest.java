@@ -2,7 +2,7 @@ package utilstest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.joutak.loginpluginforjoutak.dto.PlayerDto;
+import org.joupen.dto.PlayerDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
