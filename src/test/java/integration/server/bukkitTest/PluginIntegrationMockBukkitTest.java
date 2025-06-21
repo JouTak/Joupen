@@ -1,8 +1,9 @@
 package integration.server.bukkitTest;
 
 import be.seeseemelk.mockbukkit.entity.PlayerMock;
-import jakarta.persistence.EntityManager;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.joupen.database.DatabaseManager;
+import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.junit.jupiter.api.Test;
 
@@ -20,30 +21,32 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         capturedMessages.clear();
         String playerName = "TestPlayer";
         server.dispatchCommand(admin, "joupen prolong " + playerName + " 30d");
-        EntityManager em = plugin.getDatabaseManager().getEntityManager();
-        assertNotNull(em, "EntityManager не должен быть null");
-        assertTrue(em.isOpen(), "EntityManager должен быть открыт");
-        em.getTransaction().begin();
-        PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
-                .setParameter("name", playerName)
-                .getSingleResult();
-        assertNotNull(playerEntity);
-        assertEquals(playerName, playerEntity.getName());
-        assertTrue(playerEntity.getPaid());
-        assertNotNull(playerEntity.getLastProlongDate());
-        assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()));
-        em.getTransaction().commit();
-        em.close();
+
+        // Получение DatabaseManager и создание TransactionManager
+        DatabaseManager databaseManager = plugin.getDatabaseManager();
+        TransactionManager transactionManager = new TransactionManager(databaseManager);
+
+        // Проверка данных в базе с использованием TransactionManager
+        transactionManager.executeInTransaction(em -> {
+            PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
+                    .setParameter("name", playerName)
+                    .getSingleResult();
+            assertNotNull(playerEntity, "PlayerEntity не должен быть null");
+            assertEquals(playerName, playerEntity.getName());
+            assertTrue(playerEntity.getPaid(), "Игрок должен быть помечен как платный");
+            assertNotNull(playerEntity.getLastProlongDate(), "LastProlongDate не должен быть null");
+            assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()), "ValidUntil должен быть в будущем");
+        });
     }
 
     @Test
     void testPlayerLoginWithValidSubscription() throws UnknownHostException {
         PlayerMock admin = createAdminPlayer();
         String playerName = "ValidPlayer";
-        server.dispatchCommand(admin, "joupen prolong " + playerName + " 30d");
+        server.dispatchCommand(admin, "joupen prolong " + playerName + " 2d");
 
         PlayerMock player = createPlayer(playerName);
-        var event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1")); // Fixed line
+        PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1"));
 
         server.getPluginManager().callEvent(event);
 
@@ -55,19 +58,24 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         PlayerMock admin = createAdminPlayer();
         String playerName = "ExpiredPlayer";
         server.dispatchCommand(admin, "joupen prolong " + playerName + " 1d");
-        EntityManager em = plugin.getDatabaseManager().getEntityManager();
-        assertTrue(em.isOpen(), "EntityManager должен быть открыт");
-        em.getTransaction().begin();
-        PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
-                .setParameter("name", playerName)
-                .getSingleResult();
-        playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
-        em.merge(playerEntity);
-        em.getTransaction().commit();
-        em.close();
+
+        // Получение DatabaseManager и создание TransactionManager
+        DatabaseManager databaseManager = plugin.getDatabaseManager();
+        TransactionManager transactionManager = new TransactionManager(databaseManager);
+
+        // Обновление ValidUntil для имитации истекшей подписки
+        transactionManager.executeInTransaction(em -> {
+            PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
+                    .setParameter("name", playerName)
+                    .getSingleResult();
+            playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
+            em.merge(playerEntity);
+        });
+
         PlayerMock player = createPlayer(playerName);
-        var event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1")); // Fixed for consistency
+        PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1"));
         server.getPluginManager().callEvent(event);
+
         assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
         assertTrue(event.getKickMessage().contains("Проходка кончилась"));
     }

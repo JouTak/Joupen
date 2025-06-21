@@ -11,27 +11,40 @@ import java.util.Map;
 public final class JoupenProperties {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JoupenProperties.class);
-    private final JoupenPlugin plugin;
+    private static JoupenPlugin plugin;
     public static String playersFilepath;
-    public static Boolean useSql;
-    public static Boolean migrate;
-    public static Boolean enabled = Boolean.TRUE;
+    public static Boolean useSql = false; // Значение по умолчанию
+    public static Boolean migrate = false; // Значение по умолчанию
+    public static Boolean enabled = true; // Значение по умолчанию
     public static Map<String, Object> dbConfig;
+    private static boolean initialized = false;
 
-    public JoupenProperties(JoupenPlugin plugin) {
-        this.plugin = plugin;
-        loadConfig();
+    private JoupenProperties() {
+        // Приватный конструктор для предотвращения создания экземпляров
     }
 
-    private void loadConfig() {
-        File configDir = plugin.getDataFolder();
+    public static void initialize(JoupenPlugin pluginInstance) {
+        if (initialized) {
+            LOGGER.warn("JoupenProperties already initialized, skipping");
+            return;
+        }
+        plugin = pluginInstance;
+        loadConfig(plugin.getDataFolder());
+        initialized = true;
+    }
+
+    public static void loadForTests(File configDir) {
+        if (initialized) {
+            LOGGER.warn("JoupenProperties already initialized, skipping test load");
+            return;
+        }
+        loadConfig(configDir);
+        initialized = true;
+    }
+
+    private static void loadConfig(File configDir) {
         LOGGER.info("Plugin data folder: {}", configDir.getAbsolutePath());
         FileUtils.ensureDirectoryExists(configDir);
-        if (!configDir.exists()) {
-            LOGGER.error("Failed to create plugin data folder: {}", configDir.getAbsolutePath());
-            throw new IllegalStateException("Plugin data folder does not exist: " + configDir.getAbsolutePath());
-        }
-
         File configFile = new File(configDir, "config.yml");
         LOGGER.info("Checking config file: {}", configFile.getAbsolutePath());
         if (!configFile.exists()) {
@@ -45,12 +58,12 @@ public final class JoupenProperties {
         LOGGER.info("Loaded config: {}", config);
 
         Map<String, Object> pluginConfig = (Map<String, Object>) config.getOrDefault("plugin", Map.of());
-        playersFilepath = new File(configDir, (String) pluginConfig.getOrDefault("saveFilepath", "player.json")).getPath();
+        playersFilepath = new File(configDir, (String) pluginConfig.getOrDefault("playersFile", "player.json")).getPath();
         useSql = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("useSql", false)));
         migrate = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("migrate", false)));
         enabled = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("enabled", true)));
-        LOGGER.info("Plugin config: playersFilepath={}, useSql={}, migrate={}, enabled={}",
-                playersFilepath, useSql, migrate, enabled);
+        LOGGER.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}",
+                playersFilepath, enabled, useSql, migrate);
 
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
@@ -61,7 +74,7 @@ public final class JoupenProperties {
         }
     }
 
-    private Map<String, Object> loadYaml(File configFile) {
+    private static Map<String, Object> loadYaml(File configFile) {
         try {
             if (!configFile.exists()) {
                 LOGGER.error("Config file does not exist: {}", configFile.getAbsolutePath());
@@ -75,12 +88,12 @@ public final class JoupenProperties {
         }
     }
 
-    private void createDefaultConfig(File configFile) {
+    private static void createDefaultConfig(File configFile) {
         LOGGER.info("Creating default config at: {}", configFile.getAbsolutePath());
         String defaultContent = """
                 plugin:
                   enabled: true
-                  saveFilepath: player.json
+                  playersFile: player.json
                   useSql: true
                   migrate: false
                 database:

@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
@@ -26,10 +27,12 @@ public class PlayerJoinEventHandler implements Listener {
 
     private final PlayerRepository playerRepository;
     private final PlayerMapper playerMapper;
+    private final TransactionManager transactionManager;
 
-    public PlayerJoinEventHandler(PlayerRepository playerRepository) {
+    public PlayerJoinEventHandler(PlayerRepository playerRepository, TransactionManager transactionManager) {
         this.playerRepository = playerRepository;
         this.playerMapper = Mappers.getMapper(PlayerMapper.class);
+        this.transactionManager = transactionManager;
     }
 
     @EventHandler
@@ -41,9 +44,8 @@ public class PlayerJoinEventHandler implements Listener {
         if (optionalEntity.isEmpty()) {
             optionalEntity = playerRepository.findByName(player.getName());
         }
-        PlayerEntity playerEntity = optionalEntity.orElse(null);
 
-        if (playerEntity == null) {
+        if (optionalEntity.isEmpty()) {
             TextComponent textComponent = Component.text()
                     .append(Component.text("Тебя нет в вайтлисте. Напиши по этому поводу ", NamedTextColor.BLUE))
                     .append(Component.text("EnderDiss'e", NamedTextColor.RED))
@@ -52,7 +54,7 @@ public class PlayerJoinEventHandler implements Listener {
             return;
         }
 
-        PlayerDto playerDto = playerMapper.entityToDto(playerEntity);
+        PlayerDto playerDto = playerMapper.entityToDto(optionalEntity.get());
 
         // Проверка срока действия подписки
         if (playerDto.getValidUntil().isBefore(LocalDateTime.now())) {
@@ -67,21 +69,21 @@ public class PlayerJoinEventHandler implements Listener {
         // Обновление UUID и продление подписки
         UUID uuid = playerDto.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime validUntil = playerDto.getValidUntil()
-                    .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
-            playerDto.setValidUntil(validUntil);
-            playerDto.setLastProlongDate(now);
-            playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
-
-            try {
-                playerRepository.update(playerDto);
-                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
-            } catch (Exception e) {
-                log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
-                playerLoginEvent.disallow(PlayerLoginEvent.Result.KICK_OTHER, Component.text("Ошибка сервера. Обратитесь к администратору."));
-                return;
-            }
+            transactionManager.executeInTransaction(em -> {
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime validUntil = playerDto.getValidUntil()
+                        .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
+                playerDto.setValidUntil(validUntil);
+                playerDto.setLastProlongDate(now);
+                playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
+                try {
+                    playerRepository.update(playerDto);
+                    log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
+                } catch (Exception e) {
+                    log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
+                    throw new RuntimeException("Failed to update player data", e);
+                }
+            });
         }
 
         playerLoginEvent.allow();

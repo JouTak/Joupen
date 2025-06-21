@@ -1,3 +1,4 @@
+
 package org.joupen;
 
 import lombok.Getter;
@@ -6,21 +7,19 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.joupen.commands.LoginAddAndRemovePlayerCommand;
 import org.joupen.database.DatabaseManager;
+import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
-import org.joupen.dto.PlayerDtos;
 import org.joupen.event.PlayerJoinEventHandler;
-import org.joupen.inputoutput.JsonReaderImpl;
-import org.joupen.inputoutput.JsonWriterImpl;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.repository.PlayerRepositoryFactory;
+import org.joupen.repository.impl.PlayerRepositoryFileImpl;
 import org.joupen.utils.JoupenProperties;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Getter
@@ -28,27 +27,36 @@ public class JoupenPlugin extends JavaPlugin {
 
     @Getter
     private static JoupenPlugin instance;
-    private JoupenProperties properties;
     private PlayerRepository playerRepository;
     private DatabaseManager databaseManager;
+    private TransactionManager transactionManager;
 
     @Override
     public void onEnable() {
         instance = this;
-        properties = new JoupenProperties(this);
 
-        if (!properties.enabled) {
+        // Инициализация JoupenProperties
+        try {
+            JoupenProperties.initialize(this);
+        } catch (Exception e) {
+            log.error("Failed to initialize JoupenProperties: {}", e.getMessage(), e);
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        if (!JoupenProperties.enabled) {
             log.error("Plugin was disabled in config. Enable it in config.yml");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         try {
-            if (properties.useSql) {
+            if (JoupenProperties.useSql) {
                 databaseManager = new DatabaseManager();
-                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager.getEntityManager());
+                transactionManager = new TransactionManager(databaseManager);
+                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager.getEntityManager(), transactionManager);
             } else {
-                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(null);
+                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(null, null);
             }
             log.info("Using profile with repository {}", playerRepository.getClass().getSimpleName());
         } catch (Exception e) {
@@ -57,76 +65,80 @@ public class JoupenPlugin extends JavaPlugin {
             return;
         }
 
-        if (properties.migrate) {
-            if (properties.useSql) {
+        if (JoupenProperties.migrate) {
+            if (JoupenProperties.useSql) {
                 migrateFromFileToDatabase();
             } else {
                 migrateFromDatabaseToFile();
             }
         }
 
-        new LoginAddAndRemovePlayerCommand(playerRepository);
-        Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
+        new LoginAddAndRemovePlayerCommand(playerRepository, transactionManager);
+        Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository, transactionManager), this);
 
-        log.info("LoginPluginForJoutak enabled successfully!");
+        log.info("JoupenPlugin enabled successfully!");
     }
 
     @Override
     public void onDisable() {
-        log.info("LoginPluginForJoutak disabling...");
+        log.info("JoupenPlugin disabling...");
         if (databaseManager != null) {
             databaseManager.close();
         }
-        log.info("LoginPluginForJoutak disabled!");
+        log.info("JoupenPlugin disabled!");
     }
 
     private void migrateFromFileToDatabase() {
-        if (!properties.useSql) {
+        if (!JoupenProperties.useSql) {
             return;
         }
-        JsonReaderImpl reader = new JsonReaderImpl(properties.playersFilepath);
+        PlayerRepository fileRepository = new PlayerRepositoryFileImpl();
         PlayerMapper playerMapper = Mappers.getMapper(PlayerMapper.class);
-        PlayerDtos players = reader.read();
-        if (players == null || players.getPlayerDtoList() == null || players.getPlayerDtoList().isEmpty()) {
+        List<PlayerEntity> players = fileRepository.findAll();
+        if (players == null || players.isEmpty()) {
             log.info("No players found in file for migration.");
             return;
         }
-        for (PlayerDto playerDto : players.getPlayerDtoList()) {
+        for (PlayerEntity playerEntity : players) {
             try {
-                Optional<PlayerEntity> existing = playerRepository.findByUuid(playerDto.getUuid());
+                Optional<PlayerEntity> existing = playerRepository.findByUuid(playerEntity.getUuid());
+                PlayerDto playerDto = playerMapper.entityToDto(playerEntity);
                 if (existing.isPresent()) {
-                    playerMapper.updateEntityFromDto(playerDto, existing.get());
-                    playerRepository.update(playerMapper.entityToDto(existing.get()));
+                    // Обновляем существующую сущность
+                    playerRepository.update(playerDto);
+                    log.info("Updated player in database: {} ({})", playerEntity.getName(), playerEntity.getUuid());
                 } else {
+                    // Сбрасываем ID для новой сущности
+                    playerDto.setId(null);
                     playerRepository.save(playerDto);
+                    log.info("Saved new player to database: {} ({})", playerEntity.getName(), playerEntity.getUuid());
                 }
-                log.info("Migrated player from file to database: {} ({})", playerDto.getName(), playerDto.getUuid());
             } catch (Exception e) {
-                log.warn("Failed to migrate player {} to database: {}", playerDto.getName(), e.getMessage());
+                log.warn("Failed to migrate player {} to database: {}", playerEntity.getName(), e.getMessage());
             }
         }
         log.info("Migration from file to database completed.");
     }
 
     private void migrateFromDatabaseToFile() {
-        if (properties.useSql) {
+        if (JoupenProperties.useSql) {
             return;
         }
         try {
+            // Создаём временный DB-репозиторий для чтения из базы данных
             DatabaseManager tempDbManager = new DatabaseManager();
-            PlayerRepository tempRepo = PlayerRepositoryFactory.getPlayerRepository(tempDbManager.getEntityManager());
+            TransactionManager tempTransactionManager = new TransactionManager(tempDbManager);
+            PlayerRepository tempRepo = PlayerRepositoryFactory.getPlayerRepository(tempDbManager.getEntityManager(), tempTransactionManager);
             PlayerMapper playerMapper = Mappers.getMapper(PlayerMapper.class);
             List<PlayerEntity> entities = tempRepo.findAll();
             if (entities.isEmpty()) {
                 log.info("No players found in database for migration.");
                 return;
             }
-            PlayerDtos playerDtos = new PlayerDtos();
-            playerDtos.setPlayerDtoList(entities.stream()
+            List<PlayerDto> playerDtos = entities.stream()
                     .map(playerMapper::entityToDto)
-                    .collect(Collectors.toList()));
-            JsonWriterImpl writer = new JsonWriterImpl(properties.playersFilepath);
-            writer.write(playerDtos);
+                    .toList();
+            playerDtos.forEach(playerDto -> playerRepository.save(playerDto));
             log.info("Migration from database to file completed.");
             tempDbManager.close();
         } catch (Exception e) {

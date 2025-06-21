@@ -9,6 +9,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
@@ -17,6 +18,7 @@ import org.mapstruct.factory.Mappers;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -29,17 +31,21 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
     private final PlayerRepository playerRepository;
     private final PlayerMapper playerMapper;
+    private final TransactionManager transactionManager;
 
-    public LoginAddAndRemovePlayerCommand(PlayerRepository playerRepository) {
+    public LoginAddAndRemovePlayerCommand(PlayerRepository playerRepository, TransactionManager transactionManager) {
         super("joupen");
         this.playerRepository = playerRepository;
         this.playerMapper = Mappers.getMapper(PlayerMapper.class);
+        this.transactionManager = transactionManager;
     }
 
     @Override
     public void execute(CommandSender commandSender, Command command, String string, String[] args) {
+        log.info("Executing command /joupen by {} with args: {}", commandSender.getName(), Arrays.toString(args));
         if (args.length < 1) {
             commandSender.sendMessage(Component.text("Wrong amount of arguments. Try /joupen help", NamedTextColor.GOLD));
+            log.warn("Command /joupen failed: insufficient arguments");
             return;
         }
 
@@ -49,14 +55,20 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             case "prolong" -> prolongCommand(commandSender, args, false);
             case "gift" -> prolongCommand(commandSender, args, true);
             case "link" -> linkCommand(commandSender);
+            default -> {
+                commandSender.sendMessage(Component.text("Unknown subcommand. Try /joupen help", NamedTextColor.RED));
+                log.warn("Unknown subcommand: {}", args[0]);
+            }
         }
     }
 
     private boolean checkPermission(CommandSender commandSender, String permission) {
         if (!commandSender.hasPermission(permission)) {
             commandSender.sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
+            log.warn("Permission {} denied for {}", permission, commandSender.getName());
             return true;
         }
+        log.info("Permission {} granted for {}", permission, commandSender.getName());
         return false;
     }
 
@@ -89,18 +101,21 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .append(Component.text("к", NamedTextColor.RED))
                 .build();
         commandSender.sendMessage(textComponent);
+        log.info("Displayed help for {}", commandSender.getName());
     }
 
     private void infoCommand(CommandSender commandSender, String[] args) {
+        log.info("Executing /joupen info with args: {}", Arrays.toString(args));
         String playerName = (args.length > 1 && !checkPermission(commandSender, "joupen.admin")) ? args[1] : commandSender.getName();
 
         Optional<PlayerEntity> optionalEntity = playerRepository.findByName(playerName);
         if (optionalEntity.isEmpty()) {
-            if (args.length > 1) {
+            if(args.length > 1) {
                 commandSender.sendMessage(Component.text("Can't find player with name " + playerName, NamedTextColor.RED));
+                log.warn("Player {} not found for info command", playerName);
             } else {
                 commandSender.sendMessage(Component.text("SOMETHING WENT WRONG! JOUPEN PLUGIN COULDN'T FIND INFO ABOUT YOU! PLEASE CONTACT ENDERDISSA", NamedTextColor.RED));
-                log.error("CAN'T FIND INFO ABOUT EXISTING PLAYER {}!", playerName);
+                log.error("Can't find info about existing player {}!", playerName);
             }
             return;
         }
@@ -121,42 +136,71 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .build();
 
         commandSender.sendMessage(textComponent);
+        log.info("Displayed info for player {} to {}", playerName, commandSender.getName());
     }
 
     private Duration parseDuration(String durationStr) {
-        Pattern pattern = Pattern.compile("(\\d+)d|(\\d+)h|(\\d+)m");
-        Matcher matcher = pattern.matcher(durationStr);
+        log.info("Parsing duration string: {}", durationStr);
+        Pattern pattern = Pattern.compile("(\\d+)([dhm])", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(durationStr.toLowerCase());
         int days = 0;
         int hours = 0;
         int minutes = 0;
+        boolean found = false;
+
         while (matcher.find()) {
-            if (matcher.group(1) != null) {
-                days = Integer.parseInt(matcher.group(1));
-            } else if (matcher.group(2) != null) {
-                hours = Integer.parseInt(matcher.group(2));
-            } else if (matcher.group(3) != null) {
-                minutes = Integer.parseInt(matcher.group(3));
+            found = true;
+            int value = Integer.parseInt(matcher.group(1));
+            String unit = matcher.group(2);
+            switch (unit) {
+                case "d":
+                    days = value;
+                    log.info("Parsed days: {}", days);
+                    break;
+                case "h":
+                    hours = value;
+                    log.info("Parsed hours: {}", hours);
+                    break;
+                case "m":
+                    minutes = value;
+                    log.info("Parsed minutes: {}", minutes);
+                    break;
             }
         }
-        return Duration.ofDays(days).plusHours(hours).plusMinutes(minutes);
+
+        if (!found) {
+            log.warn("No valid duration found in string: {}", durationStr);
+            throw new IllegalArgumentException("Invalid duration format");
+        }
+
+        Duration duration = Duration.ofDays(days).plusHours(hours).plusMinutes(minutes);
+        log.info("Parsed duration: {} days, {} hours, {} minutes", days, hours, minutes);
+        return duration;
     }
 
     private String formatDuration(Duration duration) {
         long days = duration.toDays();
-        long hours = duration.toHours() % 24;
-        long minutes = duration.toMinutes() % 60;
+        long hours = duration.toHoursPart();
+        long minutes = duration.toMinutesPart();
         StringBuilder sb = new StringBuilder();
         if (days > 0) sb.append(days).append("d ");
         if (hours > 0) sb.append(hours).append("h ");
         if (minutes > 0) sb.append(minutes).append("m");
-        return sb.toString().trim();
+        String result = sb.toString().trim();
+        log.info("Formatted duration: {}", result);
+        return result;
     }
 
     private void prolongCommand(CommandSender commandSender, String[] args, boolean gift) {
-        if (checkPermission(commandSender, "joupen.admin")) return;
+        log.info("Executing /joupen prolong with args: {}, gift: {}", Arrays.toString(args), gift);
+        if (checkPermission(commandSender, "joupen.admin")) {
+            log.warn("Prolong command aborted: {} lacks joupen.admin permission", commandSender.getName());
+            return;
+        }
 
         if (args.length < 2) {
             commandSender.sendMessage(Component.text("Wrong amount of arguments. Try /joupen help", NamedTextColor.RED));
+            log.warn("Prolong command failed: insufficient arguments");
             return;
         }
 
@@ -166,76 +210,79 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             try {
                 duration = parseDuration(args[2]);
             } catch (Exception e) {
-                commandSender.sendMessage(Component.text("Invalid duration format. Use format like 3d2h7m", NamedTextColor.RED));
+                commandSender.sendMessage(Component.text("Invalid duration format. Use format like 3d, 2h, or 7m (e.g., 3d2h7m)", NamedTextColor.RED));
+                log.error("Failed to parse duration '{}': {}", args[2], e.getMessage());
                 return;
             }
         } else {
             duration = Duration.ofDays(30); // Default: 1 month (30 days)
+            log.info("Using default duration: 30 days");
         }
 
-        EntityManager em = playerRepository.getEntityManager();
-        try {
-            em.getTransaction().begin();
-
-            if ("all".equals(args[1])) {
-                List<PlayerEntity> players = playerRepository.findAll();
-                players.forEach(entity -> {
-                    PlayerDto playerDto = playerMapper.entityToDto(entity);
-                    if (!playerDto.isPaid() && !gift) return;
-                    LocalDateTime validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
-                    playerDto.setValidUntil(validUntil.plus(duration));
-                    try {
-                        playerRepository.update(playerDto);
-                    } catch (Exception e) {
-                        log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
-                    }
-                });
-                commandSender.sendMessage(Component.text("Gave everyone " + formatDuration(duration) + " time", NamedTextColor.RED));
-            } else {
-                Optional<PlayerEntity> optionalEntity = playerRepository.findByName(args[1]);
-                PlayerDto playerDto = optionalEntity.map(playerMapper::entityToDto).orElse(null);
-                boolean isNew = playerDto == null;
-
-                if (isNew) {
-                    playerDto = PlayerDto.builder()
-                            .name(args[1])
-                            .paid(!gift)
-                            .lastProlongDate(now.minusDays(1))
-                            .validUntil(now.minusDays(1))
-                            .uuid(INITIAL_UUID.getUuid())
-                            .build();
+        if ("all".equals(args[1])) {
+            log.info("Processing prolongation for all players");
+            List<PlayerEntity> players = playerRepository.findAll();
+            players.forEach(entity -> {
+                PlayerDto playerDto = playerMapper.entityToDto(entity);
+                if (!playerDto.isPaid() && !gift) {
+                    log.info("Skipping player {}: not paid and not a gift", playerDto.getName());
+                    return;
                 }
-
-                LocalDateTime validUntil = playerDto.getValidUntil();
-                if (validUntil.isBefore(now)) {
-                    playerDto.setLastProlongDate(now);
-                    validUntil = now;
-                }
+                LocalDateTime validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
                 playerDto.setValidUntil(validUntil.plus(duration));
+                try {
+                    playerRepository.update(playerDto);
+                    log.info("Updated player {}: new validUntil = {}", playerDto.getName(), playerDto.getValidUntil());
+                } catch (Exception e) {
+                    log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
+                }
+            });
+            commandSender.sendMessage(Component.text("Gave everyone " + formatDuration(duration) + " time", NamedTextColor.RED));
+            log.info("Prolongation for all players completed: {}", formatDuration(duration));
+        } else {
+            log.info("Processing prolongation for player: {}", args[1]);
+            Optional<PlayerEntity> optionalEntity = playerRepository.findByName(args[1]);
+            PlayerDto playerDto = optionalEntity.map(playerMapper::entityToDto).orElse(null);
+            boolean isNew = playerDto == null;
 
-                if (isNew) {
+            if (isNew) {
+                playerDto = PlayerDto.builder()
+                        .name(args[1])
+                        .paid(!gift)
+                        .lastProlongDate(now.minusDays(1))
+                        .validUntil(now.minusDays(1))
+                        .uuid(INITIAL_UUID.getUuid())
+                        .build();
+                log.info("Created new player DTO: {}", playerDto.getName());
+            }
+
+            LocalDateTime validUntil = playerDto.getValidUntil();
+            if (validUntil.isBefore(now)) {
+                playerDto.setLastProlongDate(now);
+                validUntil = now;
+                log.info("Updated lastProlongDate for {} to {}", playerDto.getName(), now);
+            }
+            playerDto.setValidUntil(validUntil.plus(duration));
+            log.info("Set new validUntil for {} to {}", playerDto.getName(), playerDto.getValidUntil());
+
+            if (isNew) {
+                try {
                     playerRepository.save(playerDto);
                     Bukkit.broadcast(Component.text("Новый игрок " + args[1] + " впервые оплатил проходку! Ура!", NamedTextColor.AQUA));
                     commandSender.sendMessage(Component.text("Added new player to the whitelist: " + args[1], NamedTextColor.RED));
-                    log.warn("Added new player to the whitelist: {}", args[1]);
-                } else {
+                    log.info("Saved new player to whitelist: {}", args[1]);
+                } catch (Exception e) {
+                    log.error("Failed to save new player {}: {}", args[1], e.getMessage());
+                }
+            } else {
+                try {
                     playerRepository.update(playerDto);
                     Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!", NamedTextColor.AQUA));
                     commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
-                    log.warn("Added player to the whitelist: {}", args[1]);
+                    log.info("Updated player in whitelist: {}", args[1]);
+                } catch (Exception e) {
+                    log.error("Failed to update player {}: {}", args[1], e.getMessage());
                 }
-            }
-
-            em.getTransaction().commit();
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            log.error("Failed to process prolong command for {}: {}", args[1], e.getMessage());
-            commandSender.sendMessage(Component.text("Error saving player data. Contact administrator.", NamedTextColor.RED));
-        } finally {
-            if (em.isOpen()) {
-                em.close();
             }
         }
     }
@@ -251,5 +298,6 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .clickEvent(ClickEvent.openUrl("https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b/"))
                 .build();
         commandSender.sendMessage(textComponent);
+        log.info("Displayed payment link to {}", commandSender.getName());
     }
 }

@@ -10,43 +10,49 @@ import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.joupen.JoupenPlugin;
+import org.joupen.database.DatabaseManager;
+import org.joupen.database.TransactionManager;
+import org.joupen.dto.PlayerDto;
+import org.joupen.repository.PlayerRepository;
+import org.joupen.repository.impl.PlayerRepositoryDbImpl;
+import org.joupen.utils.JoupenProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.shaded.org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.*;
-
 
 @Testcontainers
 public abstract class BasePluginIntegrationTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(BasePluginIntegrationTest.class);
     protected static ServerMock server;
     protected static JoupenPlugin plugin;
     protected static List<String> capturedMessages;
     protected static File testDir;
-    protected static BaseMariaDBContainer baseMariaDBContainer = new BaseMariaDBContainer();
+    protected static PlayerRepository playerRepository;
 
     @BeforeAll
     static void setUp() throws Exception {
-        // Мокаем сервер и инициализируем список сообщений
         server = MockBukkit.mock();
         capturedMessages = new ArrayList<>();
 
-        // Запускаем контейнер MariaDB и получаем JDBC URL
-        baseMariaDBContainer.mariaDB.start();
-        String mariaDbJdbcUrl = baseMariaDBContainer.mariaDB.getJdbcUrl();
+        BaseMariaDBContainer.mariaDB.start();
+        String mariaDbJdbcUrl = BaseMariaDBContainer.mariaDB.getJdbcUrl();
         System.out.println("MariaDB JDBC URL: " + mariaDbJdbcUrl);
 
-        // Настраиваем базу данных и применяем миграции через Liquibase
         Database database = DatabaseFactory.getInstance()
-                .findCorrectDatabaseImplementation(new JdbcConnection(baseMariaDBContainer.mariaDB.createConnection("")));
+                .findCorrectDatabaseImplementation(new JdbcConnection(BaseMariaDBContainer.mariaDB.createConnection("")));
         Liquibase liquibase = new Liquibase(
                 "db/changelog/db.changelog-master.yaml",
                 new ClassLoaderResourceAccessor(),
@@ -54,11 +60,9 @@ public abstract class BasePluginIntegrationTest {
         );
         liquibase.update("");
 
-        // Создаем временную директорию для тестов
         Path tempDir = Files.createTempDirectory("mockbukkit-test");
         testDir = tempDir.toFile();
 
-        // Проверяем наличие исходных файлов конфигурации
         Path configPath = Path.of("src/test/resources/joupen/config.yml").toAbsolutePath();
         Path playersJsonPath = Path.of("src/test/resources/joupen/player.json").toAbsolutePath();
 
@@ -66,42 +70,41 @@ public abstract class BasePluginIntegrationTest {
             throw new IllegalStateException("Требуемые тестовые файлы не найдены");
         }
 
-        // Парсим YAML и обновляем URL базы данных
         Yaml yaml = new Yaml();
         String configContent = Files.readString(configPath);
         Map<String, Object> config = yaml.load(configContent);
         Map<String, Object> databaseConfig = (Map<String, Object>) config.get("database");
-        databaseConfig.put("url", mariaDbJdbcUrl); // Устанавливаем правильный URL
+        databaseConfig.put("url", mariaDbJdbcUrl);
 
-        // Загружаем плагин
-        plugin = MockBukkit.load(JoupenPlugin.class);
-
-        // Настраиваем папку данных плагина
-        File pluginDataFolder = plugin.getDataFolder();
+        File pluginDataFolder = new File(testDir, "plugins/JoupenPlugin");
         if (!pluginDataFolder.exists()) {
             pluginDataFolder.mkdirs();
         }
 
-        // Записываем обновленный config.yml и копируем player.json
-        Files.writeString(pluginDataFolder.toPath().resolve("config.yml"), yaml.dump(config));
+        File configFile = new File(pluginDataFolder, "config.yml");
+        Files.writeString(configFile.toPath(), yaml.dump(config));
         Files.copy(playersJsonPath, pluginDataFolder.toPath().resolve("player.json"), StandardCopyOption.REPLACE_EXISTING);
 
-        // Выводим отладочную информацию
-        System.out.println("Config.yml content: " + Files.readString(pluginDataFolder.toPath().resolve("config.yml")));
-        System.out.println("Plugin dataFolder: " + plugin.getDataFolder().getAbsolutePath());
-        System.out.println("Files in dataFolder: " + Arrays.toString(pluginDataFolder.list()));
+        JoupenProperties.loadForTests(pluginDataFolder);
 
-        // Активируем плагин
+        plugin = MockBukkit.load(JoupenPlugin.class);
         server.getPluginManager().enablePlugin(plugin);
 
-        // Проверяем, что плагин успешно активирован
         if (!plugin.isEnabled()) {
             throw new IllegalStateException("Не удалось активировать плагин");
         }
 
-        // Настраиваем белый список
+        // Инициализация репозитория
+        DatabaseManager databaseManager = plugin.getDatabaseManager();
+        TransactionManager transactionManager = new TransactionManager(databaseManager);
+        playerRepository = new PlayerRepositoryDbImpl(databaseManager.getEntityManager(), transactionManager);
+
         server.setWhitelist(true);
         server.setWhitelistEnforced(true);
+
+        System.out.println("Config.yml content: " + Files.readString(configFile.toPath()));
+        System.out.println("Plugin dataFolder: " + pluginDataFolder.getAbsolutePath());
+        System.out.println("Files in dataFolder: " + Arrays.toString(pluginDataFolder.list()));
     }
 
     @AfterAll
@@ -110,12 +113,73 @@ public abstract class BasePluginIntegrationTest {
             server.getPluginManager().disablePlugin(plugin);
         }
         MockBukkit.unmock();
-        baseMariaDBContainer.mariaDB.stop();
+        BaseMariaDBContainer.mariaDB.stop();
     }
 
     @BeforeEach
-    public void cleanUpDatabase() {
-        baseMariaDBContainer.cleanUpDatabase();
+    public void cleanUpAndPopulateDatabase() {
+        BaseMariaDBContainer.cleanUpDatabase();
+        logger.info("База данных очищена");
+        populateDatabase();
+        verifyDatabasePopulation();
+    }
+
+    private void populateDatabase() {
+        // Добавляем игрока Admin
+        PlayerDto adminDto = new PlayerDto();
+        adminDto.setName("Admin");
+        adminDto.setUuid(UUID.randomUUID());
+        adminDto.setPaid(true);
+        adminDto.setLastProlongDate(LocalDateTime.now());
+        adminDto.setValidUntil(LocalDateTime.now().plusDays(30));
+        playerRepository.save(adminDto);
+        logger.info("Сохранен игрок Admin");
+
+        // Добавляем игрока TestPlayer из player.json
+        PlayerDto testPlayerDto = new PlayerDto();
+        testPlayerDto.setName("TestPlayer");
+        testPlayerDto.setUuid(UUID.randomUUID());
+        testPlayerDto.setPaid(true);
+        testPlayerDto.setLastProlongDate(LocalDateTime.now());
+        testPlayerDto.setValidUntil(LocalDateTime.now().plusDays(30));
+
+        playerRepository.save(testPlayerDto);
+
+        PlayerDto testPlayerExpiredDto = new PlayerDto();
+       testPlayerExpiredDto.setName("ExpiredPlayer");
+       testPlayerExpiredDto.setUuid(UUID.randomUUID());
+       testPlayerExpiredDto.setPaid(true);
+       testPlayerExpiredDto.setLastProlongDate(LocalDateTime.now().minusDays(60));
+       testPlayerExpiredDto.setValidUntil(LocalDateTime.now().minusDays(30));
+        logger.info("Сохранен игрок ExpiredPlayer");
+        playerRepository.save(testPlayerExpiredDto);
+
+        PlayerDto testPlayerValidDto = new PlayerDto();
+        testPlayerValidDto.setName("ValidPlayer");
+        testPlayerValidDto.setUuid(UUID.randomUUID());
+        testPlayerValidDto.setPaid(true);
+        testPlayerValidDto.setLastProlongDate(LocalDateTime.now());
+        testPlayerValidDto.setValidUntil(LocalDateTime.now().plusDays(30));
+        logger.info("Сохранен игрок ExpiredPlayer");
+        playerRepository.save(testPlayerValidDto);
+    }
+
+    private void verifyDatabasePopulation() {
+        DatabaseManager databaseManager = plugin.getDatabaseManager();
+        TransactionManager transactionManager = new TransactionManager(databaseManager);
+        transactionManager.executeInTransaction(em -> {
+            long adminCount = em.createQuery("SELECT COUNT(p) FROM PlayerEntity p WHERE p.name = :name", Long.class)
+                    .setParameter("name", "Admin")
+                    .getSingleResult();
+            long testPlayerCount = em.createQuery("SELECT COUNT(p) FROM PlayerEntity p WHERE p.name = :name", Long.class)
+                    .setParameter("name", "TestPlayer")
+                    .getSingleResult();
+            logger.info("Количество игроков Admin: {}", adminCount);
+            logger.info("Количество игроков TestPlayer: {}", testPlayerCount);
+            if (adminCount == 0 || testPlayerCount == 0) {
+                throw new IllegalStateException("Не удалось заполнить базу: Admin или TestPlayer не найдены");
+            }
+        });
     }
 
     protected PlayerMock createAdminPlayer() {
