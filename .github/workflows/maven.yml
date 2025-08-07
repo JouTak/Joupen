@@ -23,11 +23,13 @@ jobs:
         run: mvn -B verify
       - name: Build with Maven
         run: mvn -B package
-      - name: Upload JAR artifact
+      - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: joupen-plugin
-          path: target/JoupenPlugin-1.0-SNAPSHOT.jar
+          name: joupen-plugin-jars
+          path: |
+            target/original-JoupenPlugin-1.0-SNAPSHOT.jar
+            target/JoupenPlugin-1.0-SNAPSHOT.jar
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4

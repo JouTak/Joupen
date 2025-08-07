@@ -90,8 +90,7 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
         transactionManager.executeInTransaction(em -> {
-            PlayerEntity playerEntity = em.createQuery(
-                            "SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
+            PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
                     .setParameter("name", playerName)
                     .getSingleResult();
 
