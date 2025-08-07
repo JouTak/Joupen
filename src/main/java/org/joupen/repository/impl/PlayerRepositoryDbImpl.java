@@ -39,9 +39,10 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     @Override
     public Optional<PlayerEntity> findByName(String name) {
         return transactionManager.executeInTransactionWithResult(em ->
-                Optional.ofNullable(em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
+                em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
                         .setParameter("name", name)
-                        .getSingleResult())
+                        .getResultStream()
+                        .findFirst()
         );
     }
 
@@ -71,10 +72,11 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                             "SELECT p FROM PlayerEntity p WHERE p.uuid = :uuid",
                             PlayerEntity.class)
                     .setParameter("uuid", playerDto.getUuid())
-                    .getSingleResult(); // или getResultList()
+                    .getSingleResult();
 
             if (entity != null) {
                 playerMapper.updateEntityFromDto(playerDto, entity);
+                em.merge(entity);
             }
         });
     }

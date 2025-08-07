@@ -58,6 +58,7 @@ public class PlayerJoinEventHandler implements Listener {
 
         // Проверка срока действия подписки
         if (playerDto.getValidUntil().isBefore(LocalDateTime.now())) {
+            log.info("У игрока {} была подписка до {}", player.getName(), playerDto.getValidUntil());
             TextComponent textComponent = Component.text()
                     .append(Component.text("Проходка кончилась((( Надо оплатить и написать ", NamedTextColor.BLUE))
                     .append(Component.text("EnderDiss'e", NamedTextColor.RED))

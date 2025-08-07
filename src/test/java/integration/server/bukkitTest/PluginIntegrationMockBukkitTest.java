@@ -79,4 +79,26 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
         assertTrue(event.getKickMessage().contains("Проходка кончилась"));
     }
+    @Test
+    void testJoupenGiftCommand() {
+        PlayerMock admin = createAdminPlayer();
+        capturedMessages.clear();
+        String playerName = "ExpiredPlayer";
+
+        server.dispatchCommand(admin, "joupen gift " + playerName + " 170d");
+
+        DatabaseManager databaseManager = plugin.getDatabaseManager();
+        TransactionManager transactionManager = new TransactionManager(databaseManager);
+        transactionManager.executeInTransaction(em -> {
+            PlayerEntity playerEntity = em.createQuery(
+                            "SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
+                    .setParameter("name", playerName)
+                    .getSingleResult();
+
+            assertNotNull(playerEntity, "Игрок должен быть в базе");
+            assertEquals(playerName, playerEntity.getName(), "Имя игрока должно совпадать");
+            assertTrue(playerEntity.getPaid(), "Игрок должен быть помечен как оплаченный");
+            assertNotNull(playerEntity.getLastProlongDate(), "Дата продления не должна быть null");
+            assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()), "Дата окончания подписки должна быть в будущем");});
+    }
 }
