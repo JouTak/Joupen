@@ -1,4 +1,3 @@
-
 package org.joupen;
 
 import lombok.Getter;
@@ -20,11 +19,11 @@ import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 
-@Slf4j
 @Getter
+@Slf4j
 public class JoupenPlugin extends JavaPlugin {
-
     @Getter
     private static JoupenPlugin instance;
     private PlayerRepository playerRepository;
@@ -34,18 +33,17 @@ public class JoupenPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-
         // Инициализация JoupenProperties
         try {
             JoupenProperties.initialize(this);
         } catch (Exception e) {
-            log.error("Failed to initialize JoupenProperties: {}", e.getMessage(), e);
+            log.info("Failed to initialize JoupenProperties: {} {}", e.getMessage(), e);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         if (!JoupenProperties.enabled) {
-            log.error("Plugin was disabled in config. Enable it in config.yml");
+            log.info("Plugin was disabled in config. Enable it in config.yml");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -54,13 +52,13 @@ public class JoupenPlugin extends JavaPlugin {
             if (JoupenProperties.useSql) {
                 databaseManager = new DatabaseManager();
                 transactionManager = new TransactionManager(databaseManager);
-                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager.getEntityManager(), transactionManager);
+                this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager, transactionManager);
             } else {
                 this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(null, null);
             }
             log.info("Using profile with repository {}", playerRepository.getClass().getSimpleName());
         } catch (Exception e) {
-            log.error("Failed to initialize repository: {}", e.getMessage(), e);
+            log.info("Failed to initialize repository: {} {}", e.getMessage(), e);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -106,15 +104,15 @@ public class JoupenPlugin extends JavaPlugin {
                 if (existing.isPresent()) {
                     // Обновляем существующую сущность
                     playerRepository.update(playerDto);
-                    log.info("Updated player in database: {} ({})", playerEntity.getName(), playerEntity.getUuid());
+                    log.info("Updated player in database: " + playerEntity.getName());
                 } else {
                     // Сбрасываем ID для новой сущности
                     playerDto.setId(null);
                     playerRepository.save(playerDto);
-                    log.info("Saved new player to database: {} ({})", playerEntity.getName(), playerEntity.getUuid());
+                    log.info("Saved new player to database: {}", playerEntity.getName());
                 }
             } catch (Exception e) {
-                log.warn("Failed to migrate player {} to database: {}", playerEntity.getName(), e.getMessage());
+                log.info("Failed to migrate player{}to database: {}", playerEntity.getName(), e.getMessage());
             }
         }
         log.info("Migration from file to database completed.");
@@ -128,7 +126,7 @@ public class JoupenPlugin extends JavaPlugin {
             // Создаём временный DB-репозиторий для чтения из базы данных
             DatabaseManager tempDbManager = new DatabaseManager();
             TransactionManager tempTransactionManager = new TransactionManager(tempDbManager);
-            PlayerRepository tempRepo = PlayerRepositoryFactory.getPlayerRepository(tempDbManager.getEntityManager(), tempTransactionManager);
+            PlayerRepository tempRepo = PlayerRepositoryFactory.getPlayerRepository(tempDbManager, tempTransactionManager);
             PlayerMapper playerMapper = Mappers.getMapper(PlayerMapper.class);
             List<PlayerEntity> entities = tempRepo.findAll();
             if (entities.isEmpty()) {
@@ -138,11 +136,11 @@ public class JoupenPlugin extends JavaPlugin {
             List<PlayerDto> playerDtos = entities.stream()
                     .map(playerMapper::entityToDto)
                     .toList();
-            playerDtos.forEach(playerDto -> playerRepository.save(playerDto));
+            playerDtos.forEach(playerRepository::save);
             log.info("Migration from database to file completed.");
             tempDbManager.close();
         } catch (Exception e) {
-            log.error("Failed to migrate from database to file: {}", e.getMessage(), e);
+            log.error("Failed to migrate from database to file: {} {}", e.getMessage(), e);
         }
     }
 }

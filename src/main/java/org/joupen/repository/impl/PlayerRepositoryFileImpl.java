@@ -2,10 +2,10 @@ package org.joupen.repository.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
-import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
@@ -37,6 +37,7 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
         module.addDeserializer(LocalDateTime.class, new CustomLocalDateTimeDeserializer());
         module.addSerializer(LocalDateTime.class, new CustomLocalDateTimeSerializer());
         this.mapper.registerModule(module);
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         this.playerMapper = Mappers.getMapper(PlayerMapper.class);
     }
 
@@ -100,11 +101,6 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     }
 
     @Override
-    public EntityManager getEntityManager() {
-        return null;
-    }
-
-    @Override
     public void delete(UUID uuid) {
         List<PlayerDto> playerDtos = readPlayerDtos();
         if (playerDtos != null) {
@@ -128,7 +124,7 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     private void writePlayerDtos(List<PlayerDto> playerDtos) {
         try {
             File jsonFile = new File(JoupenProperties.playersFilepath);
-            mapper.writeValue(jsonFile, mapper.writeValueAsString(playerDtos));
+            mapper.writeValue(jsonFile,playerDtos);
         } catch (IOException e) {
             log.error("Error writing players file", e);
         }

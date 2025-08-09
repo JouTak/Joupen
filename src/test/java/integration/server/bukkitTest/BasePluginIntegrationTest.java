@@ -13,6 +13,7 @@ import org.joupen.JoupenPlugin;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
 import org.joupen.dto.PlayerDto;
+import org.joupen.jooq.generated.tables.Players;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.repository.impl.PlayerRepositoryDbImpl;
 import org.joupen.utils.JoupenProperties;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.yaml.snakeyaml.Yaml;
 
@@ -31,6 +33,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
+
+import static integration.server.BaseMariaDBContainer.mariaDB;
 
 @Testcontainers
 public abstract class BasePluginIntegrationTest {
@@ -44,15 +48,20 @@ public abstract class BasePluginIntegrationTest {
 
     @BeforeAll
     static void setUp() throws Exception {
+        System.setProperty("java.util.logging.config.file", "src/test/resources/logging.properties");
+        java.util.logging.LogManager.getLogManager().readConfiguration();
+
         server = MockBukkit.mock();
         capturedMessages = new ArrayList<>();
 
-        BaseMariaDBContainer.mariaDB.start();
-        String mariaDbJdbcUrl = BaseMariaDBContainer.mariaDB.getJdbcUrl();
+        mariaDB.waitingFor(Wait.forLogMessage(".*ready for connections.*", 1));
+        mariaDB.start();
+        String mariaDbJdbcUrl = mariaDB.getJdbcUrl();
+
         System.out.println("MariaDB JDBC URL: " + mariaDbJdbcUrl);
 
         Database database = DatabaseFactory.getInstance()
-                .findCorrectDatabaseImplementation(new JdbcConnection(BaseMariaDBContainer.mariaDB.createConnection("")));
+                .findCorrectDatabaseImplementation(new JdbcConnection(mariaDB.createConnection("")));
         Liquibase liquibase = new Liquibase(
                 "db/changelog/db.changelog-master.yaml",
                 new ClassLoaderResourceAccessor(),
@@ -97,7 +106,7 @@ public abstract class BasePluginIntegrationTest {
         // Инициализация репозитория
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
-        playerRepository = new PlayerRepositoryDbImpl(databaseManager.getEntityManager(), transactionManager);
+        playerRepository = new PlayerRepositoryDbImpl(databaseManager.getDslContext(), transactionManager);
 
         server.setWhitelist(true);
         server.setWhitelistEnforced(true);
@@ -113,7 +122,7 @@ public abstract class BasePluginIntegrationTest {
             server.getPluginManager().disablePlugin(plugin);
         }
         MockBukkit.unmock();
-        BaseMariaDBContainer.mariaDB.stop();
+        mariaDB.stop();
     }
 
     @BeforeEach
@@ -135,50 +144,55 @@ public abstract class BasePluginIntegrationTest {
         playerRepository.save(adminDto);
         logger.info("Сохранен игрок Admin");
 
-        // Добавляем игрока TestPlayer из player.json
+        // Добавляем игрока TestPlayer
         PlayerDto testPlayerDto = new PlayerDto();
         testPlayerDto.setName("TestPlayer");
         testPlayerDto.setUuid(UUID.randomUUID());
         testPlayerDto.setPaid(true);
         testPlayerDto.setLastProlongDate(LocalDateTime.now());
         testPlayerDto.setValidUntil(LocalDateTime.now().plusDays(30));
-
         playerRepository.save(testPlayerDto);
+        logger.info("Сохранен игрок TestPlayer");
 
+        // Добавляем игрока ExpiredPlayer
         PlayerDto testPlayerExpiredDto = new PlayerDto();
-       testPlayerExpiredDto.setName("ExpiredPlayer");
-       testPlayerExpiredDto.setUuid(UUID.randomUUID());
-       testPlayerExpiredDto.setPaid(true);
-       testPlayerExpiredDto.setLastProlongDate(LocalDateTime.now().minusDays(60));
-       testPlayerExpiredDto.setValidUntil(LocalDateTime.now().minusDays(30));
-        logger.info("Сохранен игрок ExpiredPlayer");
+        testPlayerExpiredDto.setName("ExpiredPlayer");
+        testPlayerExpiredDto.setUuid(UUID.randomUUID());
+        testPlayerExpiredDto.setPaid(true);
+        testPlayerExpiredDto.setLastProlongDate(LocalDateTime.now().minusDays(60));
+        testPlayerExpiredDto.setValidUntil(LocalDateTime.now().minusDays(30));
         playerRepository.save(testPlayerExpiredDto);
+        logger.info("Сохранен игрок ExpiredPlayer");
 
+        // Добавляем игрока ValidPlayer
         PlayerDto testPlayerValidDto = new PlayerDto();
         testPlayerValidDto.setName("ValidPlayer");
         testPlayerValidDto.setUuid(UUID.randomUUID());
         testPlayerValidDto.setPaid(true);
         testPlayerValidDto.setLastProlongDate(LocalDateTime.now());
         testPlayerValidDto.setValidUntil(LocalDateTime.now().plusDays(30));
-        logger.info("Сохранен игрок ExpiredPlayer");
         playerRepository.save(testPlayerValidDto);
+        logger.info("Сохранен игрок ValidPlayer");
     }
 
     private void verifyDatabasePopulation() {
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
-        transactionManager.executeInTransaction(em -> {
-            long adminCount = em.createQuery("SELECT COUNT(p) FROM PlayerEntity p WHERE p.name = :name", Long.class)
-                    .setParameter("name", "Admin")
-                    .getSingleResult();
-            long testPlayerCount = em.createQuery("SELECT COUNT(p) FROM PlayerEntity p WHERE p.name = :name", Long.class)
-                    .setParameter("name", "TestPlayer")
-                    .getSingleResult();
+        transactionManager.executeInTransactionWithResult(txDsl -> {
+            long adminCount = txDsl.selectCount()
+                    .from(Players.PLAYERS)
+                    .where(Players.PLAYERS.NAME.eq("Admin"))
+                    .fetchOne(0, long.class);
+            long testPlayerCount = txDsl.selectCount()
+                    .from(Players.PLAYERS)
+                    .where(Players.PLAYERS.NAME.eq("TestPlayer"))
+                    .fetchOne(0, long.class);
             logger.info("Количество игроков Admin: {}", adminCount);
             logger.info("Количество игроков TestPlayer: {}", testPlayerCount);
             if (adminCount == 0 || testPlayerCount == 0) {
                 throw new IllegalStateException("Не удалось заполнить базу: Admin или TestPlayer не найдены");
             }
+            return null;
         });
     }
 

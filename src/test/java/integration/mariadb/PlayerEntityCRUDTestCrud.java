@@ -1,7 +1,8 @@
 package integration.mariadb;
 
-import org.hibernate.Session;
+import org.jooq.impl.DSL;
 import org.joupen.domain.PlayerEntity;
+import org.joupen.jooq.generated.tables.Players;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -20,19 +21,25 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
         player.setValidUntil(LocalDateTime.now().plusDays(30));
         player.setPaid(true);
 
-        try (Session session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            session.persist(player);
-            transaction.commit();
-        }
+        dslContext.transaction(configuration -> {
+            DSL.using(configuration)
+                    .insertInto(Players.PLAYERS)
+                    .set(Players.PLAYERS.UUID, player.getUuid().toString())
+                    .set(Players.PLAYERS.NAME, player.getName())
+                    .set(Players.PLAYERS.VALID_UNTIL, player.getValidUntil())
+                    .set(Players.PLAYERS.LAST_PROLONG_DATE, player.getLastProlongDate())
+                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+                    .execute();
+        });
 
-        try (Session session = sessionFactory.openSession()) {
-            PlayerEntity savedPlayer = session.find(PlayerEntity.class, player.getId());
-            assertNotNull(savedPlayer);
-            assertEquals("TestPlayer", savedPlayer.getName());
-            assertEquals(player.getUuid(), savedPlayer.getUuid());
-            assertEquals(player.getPaid(), savedPlayer.getPaid());
-        }
+        PlayerEntity savedPlayer = dslContext.selectFrom(Players.PLAYERS)
+                .where(Players.PLAYERS.UUID.eq(player.getUuid().toString()))
+                .fetchOneInto(PlayerEntity.class);
+
+        assertNotNull(savedPlayer);
+        assertEquals("TestPlayer", savedPlayer.getName());
+        assertEquals(player.getUuid(), savedPlayer.getUuid());
+        assertEquals(player.getPaid(), savedPlayer.getPaid());
     }
 
     @Test
@@ -42,19 +49,24 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
         player.setUuid(UUID.randomUUID());
         player.setPaid(false);
 
-        Long id;
-        try (Session session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            id = (Long) session.save(player);
-            transaction.commit();
-        }
+        Long id = dslContext.transactionResult(configuration -> {
+            return DSL.using(configuration)
+                    .insertInto(Players.PLAYERS)
+                    .set(Players.PLAYERS.UUID, player.getUuid().toString())
+                    .set(Players.PLAYERS.NAME, player.getName())
+                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+                    .returning(Players.PLAYERS.ID)
+                    .fetchOne()
+                    .getId();
+        });
 
-        try (Session session = sessionFactory.openSession()) {
-            PlayerEntity foundPlayer = session.find(PlayerEntity.class, id);
-            assertNotNull(foundPlayer);
-            assertEquals("ReadPlayer", foundPlayer.getName());
-            assertEquals(player.getUuid(), foundPlayer.getUuid());
-        }
+        PlayerEntity foundPlayer = dslContext.selectFrom(Players.PLAYERS)
+                .where(Players.PLAYERS.ID.eq(id))
+                .fetchOneInto(PlayerEntity.class);
+
+        assertNotNull(foundPlayer);
+        assertEquals("ReadPlayer", foundPlayer.getName());
+        assertEquals(player.getUuid(), foundPlayer.getUuid());
     }
 
     @Test
@@ -64,29 +76,34 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
         player.setUuid(UUID.randomUUID());
         player.setPaid(false);
 
-        Long id;
-        try (Session session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            id = (Long) session.save(player);
-            transaction.commit();
-        }
+        Long id = dslContext.transactionResult(configuration -> {
+            return DSL.using(configuration)
+                    .insertInto(Players.PLAYERS)
+                    .set(Players.PLAYERS.UUID, player.getUuid().toString())
+                    .set(Players.PLAYERS.NAME, player.getName())
+                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+                    .returning(Players.PLAYERS.ID)
+                    .fetchOne()
+                    .getId();
+        });
 
-        try (Session session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            PlayerEntity playerToUpdate = session.find(PlayerEntity.class, id);
-            playerToUpdate.setName("UpdatedPlayer");
-            playerToUpdate.setPaid(true);
-            playerToUpdate.setValidUntil(LocalDateTime.now().plusDays(60));
-            session.merge(playerToUpdate);
-            transaction.commit();
-        }
+        dslContext.transaction(configuration -> {
+            DSL.using(configuration)
+                    .update(Players.PLAYERS)
+                    .set(Players.PLAYERS.NAME, "UpdatedPlayer")
+                    .set(Players.PLAYERS.PAID, (byte) 1) // true
+                    .set(Players.PLAYERS.VALID_UNTIL, LocalDateTime.now().plusDays(60))
+                    .where(Players.PLAYERS.ID.eq(id))
+                    .execute();
+        });
 
-        try (Session session = sessionFactory.openSession()) {
-            PlayerEntity updatedPlayer = session.find(PlayerEntity.class, id);
-            assertEquals("UpdatedPlayer", updatedPlayer.getName());
-            assertTrue(updatedPlayer.getPaid());
-            assertNotNull(updatedPlayer.getValidUntil());
-        }
+        PlayerEntity updatedPlayer = dslContext.selectFrom(Players.PLAYERS)
+                .where(Players.PLAYERS.ID.eq(id))
+                .fetchOneInto(PlayerEntity.class);
+
+        assertEquals("UpdatedPlayer", updatedPlayer.getName());
+        assertTrue(updatedPlayer.getPaid());
+        assertNotNull(updatedPlayer.getValidUntil());
     }
 
     @Test
@@ -96,23 +113,28 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
         player.setUuid(UUID.randomUUID());
         player.setPaid(true);
 
-        Long id;
-        try (Session session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            id = (Long) session.save(player);
-            transaction.commit();
-        }
+        Long id = dslContext.transactionResult(configuration -> {
+            return DSL.using(configuration)
+                    .insertInto(Players.PLAYERS)
+                    .set(Players.PLAYERS.UUID, player.getUuid().toString())
+                    .set(Players.PLAYERS.NAME, player.getName())
+                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+                    .returning(Players.PLAYERS.ID)
+                    .fetchOne()
+                    .getId();
+        });
 
-        try (Session session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            PlayerEntity playerToDelete = session.find(PlayerEntity.class, id);
-            session.remove(playerToDelete);
-            transaction.commit();
-        }
+        dslContext.transaction(configuration -> {
+            DSL.using(configuration)
+                    .deleteFrom(Players.PLAYERS)
+                    .where(Players.PLAYERS.ID.eq(id))
+                    .execute();
+        });
 
-        try (Session session = sessionFactory.openSession()) {
-            PlayerEntity deletedPlayer = session.find(PlayerEntity.class, id);
-            assertNull(deletedPlayer);
-        }
+        PlayerEntity deletedPlayer = dslContext.selectFrom(Players.PLAYERS)
+                .where(Players.PLAYERS.ID.eq(id))
+                .fetchOneInto(PlayerEntity.class);
+
+        assertNull(deletedPlayer);
     }
 }

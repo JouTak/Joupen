@@ -1,6 +1,5 @@
 package org.joupen.commands;
 
-import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -258,11 +257,11 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
             LocalDateTime validUntil = playerDto.getValidUntil();
             if (validUntil.isBefore(now)) {
-                playerDto.setLastProlongDate(now);
                 validUntil = now;
                 log.info("Updated lastProlongDate for {} to {}", playerDto.getName(), now);
             }
             playerDto.setValidUntil(validUntil.plus(duration));
+            playerDto.setLastProlongDate(now);
             log.info("Set new validUntil for {} to {}", playerDto.getName(), playerDto.getValidUntil());
 
             if (isNew) {
@@ -279,7 +278,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                     playerRepository.update(playerDto);
                     Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!", NamedTextColor.AQUA));
                     commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
-                    log.info("Updated player in whitelist: {}", args[1]);
+                    log.info("Player has renewed his subscription: {}", args[1]);
                 } catch (Exception e) {
                     log.error("Failed to update player {}: {}", args[1], e.getMessage());
                 }

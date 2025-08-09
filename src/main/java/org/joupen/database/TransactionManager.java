@@ -1,57 +1,44 @@
 package org.joupen.database;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+
+import lombok.extern.slf4j.Slf4j;
+import org.jooq.DSLContext;
+import org.jooq.exception.DataAccessException;
+import org.jooq.impl.DSL;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-
+@Slf4j
 public class TransactionManager {
-    private static final Logger logger = LogManager.getLogger(TransactionManager.class);
     private final DatabaseManager databaseManager;
 
     public TransactionManager(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public void executeInTransaction(Consumer<EntityManager> operation) {
-        EntityManager em = databaseManager.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
+    public void executeInTransaction(Consumer<DSLContext> operation) {
+        DSLContext dsl = databaseManager.getDslContext();
         try {
-            tx.begin();
-            operation.accept(em);
-            tx.commit();
-            logger.debug("Транзакция успешно закоммичена");
-        } catch (Exception e) {
-            if (tx.isActive()) {
-                tx.rollback();
-            }
-            logger.error("Ошибка транзакции: {}", e.getMessage(), e);
-            throw new RuntimeException("Транзакция не удалась", e);
-        } finally {
-            em.close();
+            dsl.transaction(configuration -> {
+                DSLContext txDsl = DSL.using(configuration);
+                operation.accept(txDsl);
+            });
+        } catch (DataAccessException e) {
+            log.error("Transaction failed: {} {}", e.getMessage(), e);
+            throw e;
         }
     }
 
-    public <T> T executeInTransactionWithResult(Function<EntityManager, T> operation) {
-        EntityManager em = databaseManager.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
+    public <T> T executeInTransactionWithResult(Function<DSLContext, T> operation) {
+        DSLContext dsl = databaseManager.getDslContext();
         try {
-            tx.begin();
-            T result = operation.apply(em);
-            tx.commit();
-            logger.debug("Транзакция успешно закоммичена");
-            return result;
-        } catch (Exception e) {
-            if (tx.isActive()) {
-                tx.rollback();
-            }
-            logger.error("Ошибка транзакции: {}", e.getMessage(), e);
-            throw new RuntimeException("Транзакция не удалась", e);
-        } finally {
-            em.close();
+            return dsl.transactionResult(configuration -> {
+                DSLContext txDsl = DSL.using(configuration);
+                return operation.apply(txDsl);
+            });
+        } catch (DataAccessException e) {
+            log.error("Transaction failed: {} {}", e.getMessage(), e);
+            throw e;
         }
     }
 }

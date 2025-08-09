@@ -1,9 +1,10 @@
 package org.joupen.repository.impl;
 
-import jakarta.persistence.EntityManager;
+import org.jooq.DSLContext;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
+import org.joupen.jooq.generated.tables.Players;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
@@ -13,87 +14,81 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class PlayerRepositoryDbImpl implements PlayerRepository {
-    private final EntityManager em;
+    private final DSLContext dsl;
     private final PlayerMapper playerMapper;
     private final TransactionManager transactionManager;
 
-    public PlayerRepositoryDbImpl(EntityManager entityManager, TransactionManager transactionManager) {
-        if (entityManager == null) {
-            throw new IllegalArgumentException("EntityManager cannot be null");
-        }
-        this.em = entityManager;
+    public PlayerRepositoryDbImpl(DSLContext dsl, TransactionManager transactionManager) {
+        this.dsl = dsl;
         this.playerMapper = Mappers.getMapper(PlayerMapper.class);
         this.transactionManager = transactionManager;
     }
 
     @Override
     public Optional<PlayerEntity> findByUuid(UUID uuid) {
-        return transactionManager.executeInTransactionWithResult(em ->
-                em.createQuery("SELECT p FROM PlayerEntity p WHERE p.uuid = :uuid", PlayerEntity.class)
-                        .setParameter("uuid", uuid)
-                        .getResultStream()
-                        .findFirst()
+        return transactionManager.executeInTransactionWithResult(txDsl ->
+                txDsl.selectFrom(Players.PLAYERS)
+                        .where(Players.PLAYERS.UUID.eq(uuid.toString()))
+                        .fetchOptionalInto(PlayerEntity.class)
         );
     }
 
     @Override
     public Optional<PlayerEntity> findByName(String name) {
-        return transactionManager.executeInTransactionWithResult(em ->
-                em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
-                        .setParameter("name", name)
-                        .getResultStream()
-                        .findFirst()
+        return transactionManager.executeInTransactionWithResult(txDsl ->
+                txDsl.selectFrom(Players.PLAYERS)
+                        .where(Players.PLAYERS.NAME.eq(name))
+                        .fetchOptionalInto(PlayerEntity.class)
         );
     }
 
     @Override
     public void save(PlayerDto playerDto) {
-        transactionManager.executeInTransaction(em -> {
+        transactionManager.executeInTransaction(txDsl -> {
             PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
-            if (entity.getId() == null) {
-                em.persist(entity); // Создаём новую сущность (используется при миграции)
-            } else {
-                em.merge(entity); // Обновляем существующую сущность
-            }
+            txDsl.insertInto(Players.PLAYERS)
+                    .set(Players.PLAYERS.UUID, entity.getUuid().toString())
+                    .set(Players.PLAYERS.NAME, entity.getName())
+                    .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
+                    .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
+                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .onDuplicateKeyUpdate()
+                    .set(Players.PLAYERS.NAME, entity.getName())
+                    .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
+                    .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
+                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .execute();
         });
     }
 
     @Override
     public List<PlayerEntity> findAll() {
-        return transactionManager.executeInTransactionWithResult(em ->
-                em.createQuery("SELECT p FROM PlayerEntity p", PlayerEntity.class).getResultList()
+        return transactionManager.executeInTransactionWithResult(txDsl ->
+                txDsl.selectFrom(Players.PLAYERS)
+                        .fetchInto(PlayerEntity.class)
         );
     }
 
     @Override
     public void update(PlayerDto playerDto) {
-        transactionManager.executeInTransaction(em -> {
-            PlayerEntity entity = em.createQuery(
-                            "SELECT p FROM PlayerEntity p WHERE p.uuid = :uuid",
-                            PlayerEntity.class)
-                    .setParameter("uuid", playerDto.getUuid())
-                    .getSingleResult();
-
-            if (entity != null) {
-                playerMapper.updateEntityFromDto(playerDto, entity);
-                em.merge(entity);
-            }
+        transactionManager.executeInTransaction(txDsl -> {
+            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
+            txDsl.update(Players.PLAYERS)
+                    .set(Players.PLAYERS.NAME, entity.getName())
+                    .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
+                    .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
+                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .where(Players.PLAYERS.UUID.eq(entity.getUuid().toString()))
+                    .execute();
         });
-    }
-
-
-    @Override
-    public EntityManager getEntityManager() {
-        return null;
     }
 
     @Override
     public void delete(UUID uuid) {
-        transactionManager.executeInTransaction(em -> {
-            PlayerEntity entity = em.find(PlayerEntity.class, uuid);
-            if (entity != null) {
-                em.remove(entity);
-            }
-        });
+        transactionManager.executeInTransaction(txDsl ->
+                txDsl.deleteFrom(Players.PLAYERS)
+                        .where(Players.PLAYERS.UUID.eq(uuid.toString()))
+                        .execute()
+        );
     }
 }

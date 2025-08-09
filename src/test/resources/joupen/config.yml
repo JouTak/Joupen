@@ -5,10 +5,9 @@ plugin:
   migrate: false
 database:
   url: jdbc:mariadb://mariadb:3306/mydb
-  user: user
-  password: user_password
+  user: testuser
+  password: testpass
   driver: org.mariadb.jdbc.Driver
   dialect: org.hibernate.dialect.MariaDBDialect
-  hbm2ddl: validate
   showSql: true
   formatSql: true

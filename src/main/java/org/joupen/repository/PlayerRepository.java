@@ -1,6 +1,5 @@
 package org.joupen.repository;
 
-import jakarta.persistence.EntityManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
 
@@ -15,5 +14,4 @@ public interface PlayerRepository {
     List<PlayerEntity> findAll();
     void delete(UUID uuid);
     void update(PlayerDto playerDto);
-    EntityManager getEntityManager(); // Новый метод
 }

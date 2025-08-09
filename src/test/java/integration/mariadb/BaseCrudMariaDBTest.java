@@ -1,13 +1,16 @@
 package integration.mariadb;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import liquibase.Liquibase;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
-import org.hibernate.SessionFactory;
-import org.hibernate.cfg.Configuration;
-import org.joupen.domain.PlayerEntity;
+import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
+import org.jooq.impl.DSL;
+import org.joupen.jooq.generated.tables.Players;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +27,8 @@ public abstract class BaseCrudMariaDBTest {
             .withUsername("testuser")
             .withPassword("testpass");
 
-    protected static SessionFactory sessionFactory;
+    protected static DSLContext dslContext;
+    protected static HikariDataSource dataSource;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -43,34 +47,31 @@ public abstract class BaseCrudMariaDBTest {
         );
         liquibase.update("");
 
-        // Настройка Hibernate
-        Configuration configuration = new Configuration();
-        configuration.setProperty("hibernate.connection.url", mariaDB.getJdbcUrl());
-        configuration.setProperty("hibernate.connection.username", mariaDB.getUsername());
-        configuration.setProperty("hibernate.connection.password", mariaDB.getPassword());
-        configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.MariaDBDialect");
-        configuration.setProperty("hibernate.hbm2ddl.auto", "validate");
-        configuration.setProperty("hibernate.show_sql", "true");
-        configuration.setProperty("hibernate.format_sql", "true");
-        configuration.addAnnotatedClass(PlayerEntity.class);
-
-        sessionFactory = configuration.buildSessionFactory();
+        // Настройка HikariCP и jOOQ
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(mariaDB.getJdbcUrl());
+        config.setUsername(mariaDB.getUsername());
+        config.setPassword(mariaDB.getPassword());
+        config.setDriverClassName("org.mariadb.jdbc.Driver");
+        config.setMaximumPoolSize(10);
+        dataSource = new HikariDataSource(config);
+        dslContext = DSL.using(dataSource, SQLDialect.MARIADB);
     }
 
     @AfterAll
     static void tearDown() {
-        if (sessionFactory != null) {
-            sessionFactory.close();
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
         }
         mariaDB.stop();
     }
 
     @BeforeEach
     void clearDatabase() {
-        try (var session = sessionFactory.openSession()) {
-            var transaction = session.beginTransaction();
-            session.createNativeQuery("DELETE FROM players").executeUpdate();
-            transaction.commit();
-        }
+        dslContext.transaction(configuration -> {
+            DSL.using(configuration)
+                    .deleteFrom(Players.PLAYERS)
+                    .execute();
+        });
     }
 }

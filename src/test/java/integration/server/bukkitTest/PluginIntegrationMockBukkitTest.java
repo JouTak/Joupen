@@ -5,6 +5,7 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
+import org.joupen.jooq.generated.tables.Players;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
@@ -22,20 +23,19 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         String playerName = "TestPlayer";
         server.dispatchCommand(admin, "joupen prolong " + playerName + " 30d");
 
-        // Получение DatabaseManager и создание TransactionManager
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
 
-        // Проверка данных в базе с использованием TransactionManager
-        transactionManager.executeInTransaction(em -> {
-            PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
-                    .setParameter("name", playerName)
-                    .getSingleResult();
+        transactionManager.executeInTransactionWithResult(txDsl -> {
+            PlayerEntity playerEntity = txDsl.selectFrom(Players.PLAYERS)
+                    .where(Players.PLAYERS.NAME.eq(playerName))
+                    .fetchOneInto(PlayerEntity.class);
             assertNotNull(playerEntity, "PlayerEntity не должен быть null");
             assertEquals(playerName, playerEntity.getName());
             assertTrue(playerEntity.getPaid(), "Игрок должен быть помечен как платный");
             assertNotNull(playerEntity.getLastProlongDate(), "LastProlongDate не должен быть null");
             assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()), "ValidUntil должен быть в будущем");
+            return null;
         });
     }
 
@@ -59,17 +59,14 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         String playerName = "ExpiredPlayer";
         server.dispatchCommand(admin, "joupen prolong " + playerName + " 1d");
 
-        // Получение DatabaseManager и создание TransactionManager
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
 
-        // Обновление ValidUntil для имитации истекшей подписки
-        transactionManager.executeInTransaction(em -> {
-            PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
-                    .setParameter("name", playerName)
-                    .getSingleResult();
-            playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
-            em.merge(playerEntity);
+        transactionManager.executeInTransaction(txDsl -> {
+            txDsl.update(Players.PLAYERS)
+                    .set(Players.PLAYERS.VALID_UNTIL, LocalDateTime.now().minusDays(1))
+                    .where(Players.PLAYERS.NAME.eq(playerName))
+                    .execute();
         });
 
         PlayerMock player = createPlayer(playerName);
@@ -79,6 +76,7 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
         assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
         assertTrue(event.getKickMessage().contains("Проходка кончилась"));
     }
+
     @Test
     void testJoupenGiftCommand() {
         PlayerMock admin = createAdminPlayer();
@@ -89,15 +87,16 @@ public class PluginIntegrationMockBukkitTest extends BasePluginIntegrationTest {
 
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
-        transactionManager.executeInTransaction(em -> {
-            PlayerEntity playerEntity = em.createQuery("SELECT p FROM PlayerEntity p WHERE p.name = :name", PlayerEntity.class)
-                    .setParameter("name", playerName)
-                    .getSingleResult();
-
+        transactionManager.executeInTransactionWithResult(txDsl -> {
+            PlayerEntity playerEntity = txDsl.selectFrom(Players.PLAYERS)
+                    .where(Players.PLAYERS.NAME.eq(playerName))
+                    .fetchOneInto(PlayerEntity.class);
             assertNotNull(playerEntity, "Игрок должен быть в базе");
             assertEquals(playerName, playerEntity.getName(), "Имя игрока должно совпадать");
             assertTrue(playerEntity.getPaid(), "Игрок должен быть помечен как оплаченный");
             assertNotNull(playerEntity.getLastProlongDate(), "Дата продления не должна быть null");
-            assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()), "Дата окончания подписки должна быть в будущем");});
+            assertTrue(playerEntity.getValidUntil().isAfter(LocalDateTime.now()), "Дата окончания подписки должна быть в будущем");
+            return null;
+        });
     }
 }
