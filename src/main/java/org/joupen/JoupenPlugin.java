@@ -19,7 +19,6 @@ import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Level;
 
 @Getter
 @Slf4j

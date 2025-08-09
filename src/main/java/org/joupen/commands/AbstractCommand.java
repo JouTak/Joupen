@@ -1,6 +1,9 @@
 package org.joupen.commands;
 
-import org.bukkit.command.*;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
 import org.jetbrains.annotations.NotNull;
 import org.joupen.JoupenPlugin;
 

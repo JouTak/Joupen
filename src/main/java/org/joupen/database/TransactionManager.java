@@ -8,6 +8,7 @@ import org.jooq.impl.DSL;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+
 @Slf4j
 public class TransactionManager {
     private final DatabaseManager databaseManager;

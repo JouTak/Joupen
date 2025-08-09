@@ -1,11 +1,11 @@
 package org.joupen.utils;
 
-import org.bukkit.plugin.java.JavaPlugin; // Для доступа к плагину
 import org.joupen.JoupenPlugin;
-import java.util.logging.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public final class JoupenProperties {
 

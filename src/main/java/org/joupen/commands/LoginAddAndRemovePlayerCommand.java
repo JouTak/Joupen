@@ -61,7 +61,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         }
     }
 
-    private boolean  checkPermission(CommandSender commandSender, String permission) {
+    private boolean checkPermission(CommandSender commandSender, String permission) {
         if (!commandSender.hasPermission(permission)) {
             commandSender.sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
             log.warn("Permission {} denied for {}", permission, commandSender.getName());
@@ -104,12 +104,12 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
     }
 
     private void infoCommand(CommandSender commandSender, String[] args) {
-        log.info("Executing /joupen info with args: {} by {}", Arrays.toString(args),commandSender);
+        log.info("Executing /joupen info with args: {} by {}", Arrays.toString(args), commandSender);
         String playerName = (args.length > 1 && !checkPermission(commandSender, "joupen.admin")) ? args[1] : commandSender.getName();
 
         Optional<PlayerEntity> optionalEntity = playerRepository.findByName(playerName);
         if (optionalEntity.isEmpty()) {
-            if(args.length > 1) {
+            if (args.length > 1) {
                 commandSender.sendMessage(Component.text("Can't find player with name " + playerName, NamedTextColor.RED));
                 log.warn("Player {} not found for info command", playerName);
             } else {

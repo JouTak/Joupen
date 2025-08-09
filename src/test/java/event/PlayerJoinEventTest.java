@@ -1,6 +1,7 @@
 package event;
 
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.jooq.DSLContext;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
@@ -10,7 +11,6 @@ import org.joupen.repository.PlayerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.jooq.DSLContext;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -23,7 +23,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.joupen.enums.UUIDTypes.INITIAL_UUID;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
