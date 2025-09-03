@@ -1,40 +1,29 @@
 package org.joupen.repository.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
-import org.joupen.repository.CustomLocalDateTimeDeserializer;
-import org.joupen.repository.CustomLocalDateTimeSerializer;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.JoupenProperties;
 import org.mapstruct.factory.Mappers;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.joupen.utils.Utils.mapper;
+
 @Slf4j
 public class PlayerRepositoryFileImpl implements PlayerRepository {
-    private final ObjectMapper mapper;
     private final PlayerMapper playerMapper;
 
     public PlayerRepositoryFileImpl() {
-        this.mapper = new ObjectMapper();
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(LocalDateTime.class, new CustomLocalDateTimeDeserializer());
-        module.addSerializer(LocalDateTime.class, new CustomLocalDateTimeSerializer());
-        this.mapper.registerModule(module);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         this.playerMapper = Mappers.getMapper(PlayerMapper.class);
     }
 

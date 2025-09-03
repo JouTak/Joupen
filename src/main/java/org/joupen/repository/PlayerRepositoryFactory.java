@@ -12,7 +12,7 @@ public class PlayerRepositoryFactory {
             if (databaseManager == null || transactionManager == null) {
                 throw new IllegalStateException("DatabaseManager and TransactionManager must be provided when useSql is true");
             }
-            return new PlayerRepositoryDbImpl(databaseManager.getDslContext(), transactionManager);
+            return new PlayerRepositoryDbImpl(transactionManager);
         } else {
             return new PlayerRepositoryFileImpl();
         }

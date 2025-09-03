@@ -110,12 +110,6 @@ public class PlayerJoinEventTest extends BaseTest {
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.empty());
         when(playerRepository.findByName(TEST_NAME)).thenReturn(Optional.of(playerEntity));
 
-        doAnswer(invocation -> {
-            Consumer<DSLContext> consumer = invocation.getArgument(0);
-            consumer.accept(dslContext);
-            return null;
-        }).when(transactionManager).executeInTransaction(any(Consumer.class));
-
         PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", Objects.requireNonNull(player.getAddress()).getAddress());
         playerJoinEventHandler.playerJoinEvent(event);
 
@@ -134,7 +128,6 @@ public class PlayerJoinEventTest extends BaseTest {
 
         verify(playerRepository).findByUuid(playerUuid);
         verify(playerRepository).findByName(TEST_NAME);
-        verify(transactionManager).executeInTransaction(any(Consumer.class));
         verifyNoMoreInteractions(playerRepository, transactionManager);
     }
 

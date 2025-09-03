@@ -106,7 +106,7 @@ public abstract class BasePluginIntegrationTest {
         // Инициализация репозитория
         DatabaseManager databaseManager = plugin.getDatabaseManager();
         TransactionManager transactionManager = new TransactionManager(databaseManager);
-        playerRepository = new PlayerRepositoryDbImpl(databaseManager.getDslContext(), transactionManager);
+        playerRepository = new PlayerRepositoryDbImpl(transactionManager);
 
         server.setWhitelist(true);
         server.setWhitelistEnforced(true);

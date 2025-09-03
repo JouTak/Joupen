@@ -223,7 +223,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             List<PlayerEntity> players = playerRepository.findAll();
             players.forEach(entity -> {
                 PlayerDto playerDto = playerMapper.entityToDto(entity);
-                if (!playerDto.isPaid() && !gift) {
+                if (!playerDto.getPaid() && !gift) {
                     log.info("Skipping player {}: not paid and not a gift", playerDto.getName());
                     return;
                 }

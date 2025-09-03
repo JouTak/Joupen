@@ -1,6 +1,5 @@
 package org.joupen.repository.impl;
 
-import org.jooq.DSLContext;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
@@ -14,12 +13,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class PlayerRepositoryDbImpl implements PlayerRepository {
-    private final DSLContext dsl;
     private final PlayerMapper playerMapper;
     private final TransactionManager transactionManager;
 
-    public PlayerRepositoryDbImpl(DSLContext dsl, TransactionManager transactionManager) {
-        this.dsl = dsl;
+    public PlayerRepositoryDbImpl(TransactionManager transactionManager) {
         this.playerMapper = Mappers.getMapper(PlayerMapper.class);
         this.transactionManager = transactionManager;
     }

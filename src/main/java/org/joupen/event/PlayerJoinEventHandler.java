@@ -70,21 +70,20 @@ public class PlayerJoinEventHandler implements Listener {
         // Обновление UUID и продление подписки
         UUID uuid = playerDto.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
-            transactionManager.executeInTransaction(em -> {
-                LocalDateTime now = LocalDateTime.now();
-                LocalDateTime validUntil = playerDto.getValidUntil()
-                        .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
-                playerDto.setValidUntil(validUntil);
-                playerDto.setLastProlongDate(now);
-                playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
-                try {
-                    playerRepository.update(playerDto);
-                    log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
-                } catch (Exception e) {
-                    log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
-                    throw new RuntimeException("Failed to update player data", e);
-                }
-            });
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime validUntil = playerDto.getValidUntil().plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
+
+            playerDto.setValidUntil(validUntil);
+            playerDto.setLastProlongDate(now);
+            playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
+
+            try {
+                playerRepository.update(playerDto);
+                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
+            } catch (Exception e) {
+                log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
+                throw new RuntimeException("Failed to update player data", e);
+            }
         }
 
         playerLoginEvent.allow();
