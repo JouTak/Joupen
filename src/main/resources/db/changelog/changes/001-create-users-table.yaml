@@ -22,7 +22,6 @@ databaseChangeLog:
                   type: VARCHAR(36)
                   constraints:
                     nullable: false
-                    unique: true
               - column:
                   name: last_prolong_date
                   type: DATETIME

@@ -140,11 +140,13 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
     private Duration parseDuration(String durationStr) {
         log.info("Parsing duration string: {}", durationStr);
-        Pattern pattern = Pattern.compile("(\\d+)([dhm])", Pattern.CASE_INSENSITIVE);
+        // Изменяем регулярное выражение, чтобы mo обрабатывалось до m
+        Pattern pattern = Pattern.compile("(\\d+)(mo|[dhm])", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(durationStr.toLowerCase());
         int days = 0;
         int hours = 0;
         int minutes = 0;
+        int months = 0;
         boolean found = false;
 
         while (matcher.find()) {
@@ -152,6 +154,10 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             int value = Integer.parseInt(matcher.group(1));
             String unit = matcher.group(2);
             switch (unit) {
+                case "mo":
+                    months = value;
+                    log.info("Parsed months: {}", months);
+                    break;
                 case "d":
                     days = value;
                     log.info("Parsed days: {}", days);
@@ -172,22 +178,28 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             throw new IllegalArgumentException("Invalid duration format");
         }
 
-        Duration duration = Duration.ofDays(days).plusHours(hours).plusMinutes(minutes);
-        log.info("Parsed duration: {} days, {} hours, {} minutes", days, hours, minutes);
+        Duration duration = Duration.ofDays(months * 30L)
+                .plusDays(days)
+                .plusHours(hours)
+                .plusMinutes(minutes);
+        log.info("Parsed duration: {} months, {} days, {} hours, {} minutes", months, days, hours, minutes);
         return duration;
     }
 
     private String formatDuration(Duration duration) {
-        long days = duration.toDays();
+        long totalDays = duration.toDays();
+        long months = totalDays / 30;
+        long days = totalDays % 30;
         long hours = duration.toHoursPart();
         long minutes = duration.toMinutesPart();
         StringBuilder sb = new StringBuilder();
+        if (months > 0) sb.append(months).append("mo ");
         if (days > 0) sb.append(days).append("d ");
         if (hours > 0) sb.append(hours).append("h ");
         if (minutes > 0) sb.append(minutes).append("m");
         String result = sb.toString().trim();
         log.info("Formatted duration: {}", result);
-        return result;
+        return result.isEmpty() ? "0m" : result;
     }
 
     private void prolongCommand(CommandSender commandSender, String[] args, boolean gift) {
@@ -230,7 +242,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 LocalDateTime validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
                 playerDto.setValidUntil(validUntil.plus(duration));
                 try {
-                    playerRepository.update(playerDto);
+                    playerRepository.updateByName(playerDto,playerDto.getName());
                     log.info("Updated player {}: new validUntil = {}", playerDto.getName(), playerDto.getValidUntil());
                 } catch (Exception e) {
                     log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
@@ -275,7 +287,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 }
             } else {
                 try {
-                    playerRepository.update(playerDto);
+                    playerRepository.updateByName(playerDto,playerDto.getName());
                     Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!", NamedTextColor.AQUA));
                     commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
                     log.info("Player has renewed his subscription: {}", args[1]);

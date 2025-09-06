@@ -78,8 +78,9 @@ public class PlayerJoinEventHandler implements Listener {
             playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
 
             try {
-                playerRepository.update(playerDto);
-                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID", playerDto.getName());
+                playerRepository.updateByName(playerDto,playerLoginEvent.getPlayer().getName());
+
+                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}", playerDto.getName(),playerLoginEvent.getPlayer().getUniqueId());
             } catch (Exception e) {
                 log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
                 throw new RuntimeException("Failed to update player data", e);

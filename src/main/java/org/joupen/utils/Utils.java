@@ -9,15 +9,13 @@ import org.joupen.repository.CustomLocalDateTimeSerializer;
 import java.time.LocalDateTime;
 
 public class Utils {
-    public static ObjectMapper mapper;
+    public static final ObjectMapper mapper;
 
     static {
         mapper = new ObjectMapper();
-
         SimpleModule module = new SimpleModule();
         module.addDeserializer(LocalDateTime.class, new CustomLocalDateTimeDeserializer());
         module.addSerializer(LocalDateTime.class, new CustomLocalDateTimeSerializer());
-
         mapper.registerModule(module);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
     }

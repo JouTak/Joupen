@@ -1,4 +1,4 @@
-name: JoupenPlugin
+name: joupen
 version: '${project.version}'
 main: org.joupen.JoupenPlugin
 api-version: '1.20'

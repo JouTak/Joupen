@@ -1,4 +1,4 @@
-name: JoupenPlugin
+name: joupen
 version: 1.0-SNAPSHOT
 main: org.joupen.JoupenPlugin
 api-version: 1.20

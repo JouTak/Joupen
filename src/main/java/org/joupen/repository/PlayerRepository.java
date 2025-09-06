@@ -16,7 +16,9 @@ public interface PlayerRepository {
 
     List<PlayerEntity> findAll();
 
+    void updateByUuid(PlayerDto playerDto,UUID uuid);
+
     void delete(UUID uuid);
 
-    void update(PlayerDto playerDto);
+    public void updateByName(PlayerDto playerDto, String name);
 }

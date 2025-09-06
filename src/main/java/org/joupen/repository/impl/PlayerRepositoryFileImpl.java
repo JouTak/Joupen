@@ -73,11 +73,25 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     }
 
     @Override
-    public void update(PlayerDto playerDto) {
+    public void updateByUuid(PlayerDto playerDto,UUID uuid) {
         List<PlayerDto> playerDtos = readPlayerDtos();
         if (playerDtos != null) {
             for (int i = 0; i < playerDtos.size(); i++) {
-                if (playerDtos.get(i).getUuid().equals(playerDto.getUuid())) {
+                if (playerDtos.get(i).getUuid().equals(uuid)) {
+                    playerDtos.set(i, playerDto);
+                    writePlayerDtos(playerDtos);
+                    return;
+                }
+            }
+        }
+    }
+
+    @Override
+    public void updateByName(PlayerDto playerDto, String name) {
+        List<PlayerDto> playerDtos = readPlayerDtos();
+        if (playerDtos != null) {
+            for (int i = 0; i < playerDtos.size(); i++) {
+                if (playerDtos.get(i).getName().equals(name)) {
                     playerDtos.set(i, playerDto);
                     writePlayerDtos(playerDtos);
                     return;
@@ -94,6 +108,8 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
             writePlayerDtos(playerDtos);
         }
     }
+
+
 
     private List<PlayerDto> readPlayerDtos() {
         try {

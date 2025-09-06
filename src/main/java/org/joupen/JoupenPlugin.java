@@ -102,7 +102,7 @@ public class JoupenPlugin extends JavaPlugin {
                 PlayerDto playerDto = playerMapper.entityToDto(playerEntity);
                 if (existing.isPresent()) {
                     // Обновляем существующую сущность
-                    playerRepository.update(playerDto);
+                    playerRepository.updateByUuid(playerDto,playerDto.getUuid());
                     log.info("Updated player in database: " + playerEntity.getName());
                 } else {
                     // Сбрасываем ID для новой сущности
