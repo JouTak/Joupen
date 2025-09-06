@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class Utils {
     public static ObjectMapper mapper;
 
-    {
+    static {
         mapper = new ObjectMapper();
 
         SimpleModule module = new SimpleModule();
