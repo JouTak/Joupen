@@ -79,6 +79,7 @@ jobs:
         run: |
           liquibase update \
             --changelog-file=src/main/resources/db/changelog/db.changelog-master.yaml \
+            --search-path=src/main/resources/db/changelog \
             --url=jdbc:mariadb://127.0.0.1:3306/Joupen \
             --username=user \
             --password=user_password \
