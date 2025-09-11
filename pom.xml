@@ -18,10 +18,10 @@
         <hikari.version>5.1.0</hikari.version>
         <mariadb.version>3.4.1</mariadb.version>
         <mapstruct.version>1.6.0</mapstruct.version>
-        <database.url>jdbc:mariadb://localhost:3306/mydb</database.url>
+        <database.url>jdbc:mariadb://localhost:3306/Joupen</database.url>
         <database.user>user</database.user>
         <database.password>user_password</database.password>
-        <database.schema>mydb</database.schema>
+        <database.schema>Joupen</database.schema>
         <database.driver>org.mariadb.jdbc.Driver</database.driver>
     </properties>
 
