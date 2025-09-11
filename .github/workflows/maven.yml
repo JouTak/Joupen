@@ -12,7 +12,7 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:10.6  # Compatible with your mariadb-java-client version
+        image: mariadb:10.6
         env:
           MARIADB_DATABASE: Joupen
           MARIADB_USER: user
@@ -52,8 +52,15 @@ jobs:
             sleep 5
           done
 
+      - name: Debug: List changelog files
+        run: |
+          echo "Listing files in src/main/resources/db/changelog:"
+          ls -R src/main/resources/db/changelog || echo "Directory not found"
+          echo "Listing files in target/classes/db/changelog:"
+          ls -R target/classes/db/changelog || echo "Directory not found"
+
       - name: Apply Liquibase migrations
-        run: mvn -B liquibase:update
+        run: mvn -B liquibase:update -Dliquibase.logging=debug
 
       - name: Run unit tests
         run: mvn -B test
