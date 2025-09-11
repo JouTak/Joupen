@@ -261,6 +261,24 @@
                 <version>3.3.1</version>
                 <executions>
                     <execution>
+                        <id>copy-changelog-files</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/classes/db/changelog</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources/db/changelog</directory>
+                                    <includes>
+                                        <include>**/*</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>copy-config-yml</id>
                         <phase>process-test-resources</phase>
                         <goals>
