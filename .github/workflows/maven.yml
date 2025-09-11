@@ -12,7 +12,7 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:10.6  # Совместимо с твоей версией mariadb-java-client
+        image: mariadb:10.6  # Compatible with your mariadb-java-client version
         env:
           MARIADB_DATABASE: Joupen
           MARIADB_USER: user
@@ -35,6 +35,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+
+      - name: Install MariaDB client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mariadb-client
 
       - name: Wait for MariaDB to be ready
         run: |
