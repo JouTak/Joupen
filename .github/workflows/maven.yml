@@ -70,7 +70,7 @@ jobs:
           ls -R target/classes/db/changelog || echo "Directory not found"
 
       - name: Apply Liquibase migrations
-        run: mvn -B liquibase:update -Dliquibase.logging=debug
+        run: mvn -B liquibase:update -Dliquibase.changeLogFile=classpath:db/changelog/db.changelog-master.yaml -Dliquibase.logging=debug
 
       - name: Generate JOOQ code
         run: mvn generate-sources
