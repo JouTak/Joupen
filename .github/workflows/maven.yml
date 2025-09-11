@@ -9,20 +9,56 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:10.6  # Совместимо с твоей версией mariadb-java-client
+        env:
+          MARIADB_DATABASE: Joupen
+          MARIADB_USER: user
+          MARIADB_PASSWORD: user_password
+          MARIADB_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin --user=root --password=root_password ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+
+      - name: Wait for MariaDB to be ready
+        run: |
+          for i in {1..30}; do
+            if mariadb-admin --host=127.0.0.1 --port=3306 --user=user --password=user_password ping; then
+              echo "MariaDB is ready!"
+              break
+            fi
+            echo "Waiting for MariaDB... ($i/30)"
+            sleep 5
+          done
+
+      - name: Apply Liquibase migrations
+        run: mvn -B liquibase:update
+
       - name: Run unit tests
         run: mvn -B test
+
       - name: Run integration tests
         run: mvn -B verify
+
       - name: Build with Maven
         run: mvn -B package
+
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -30,6 +66,7 @@ jobs:
           path: |
             target/original-JoupenPlugin-1.0-SNAPSHOT.jar
             target/JoupenPlugin-1.0-SNAPSHOT.jar
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
