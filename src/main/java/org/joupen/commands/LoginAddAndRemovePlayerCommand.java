@@ -289,6 +289,8 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 try {
                     playerRepository.updateByName(playerDto,playerDto.getName());
                     Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!", NamedTextColor.AQUA));
+                    Bukkit.broadcastMessage("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!");
+
                     commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
                     log.info("Player has renewed his subscription: {}", args[1]);
                 } catch (Exception e) {
