@@ -52,7 +52,7 @@ jobs:
             sleep 5
           done
 
-      - name: Debug: List changelog files
+      - name: Debug - List changelog files
         run: |
           echo "Listing files in src/main/resources/db/changelog:"
           ls -R src/main/resources/db/changelog || echo "Directory not found"
@@ -61,6 +61,9 @@ jobs:
 
       - name: Apply Liquibase migrations
         run: mvn -B liquibase:update -Dliquibase.logging=debug
+
+      - name: Generate JOOQ code
+        run: mvn generate-sources
 
       - name: Run unit tests
         run: mvn -B test
