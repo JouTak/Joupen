@@ -287,7 +287,12 @@
   <generator>
     <database>
       <name>org.jooq.meta.mariadb.MariaDBDatabase</name>
-      <inputSchema>${xmlEscape(schema)}</inputSchema>
+      <schemata>
+        <schema>
+          <inputSchema>${xmlEscape(schema)}</inputSchema>
+          <outputSchemaToDefault>true</outputSchemaToDefault>
+        </schema>
+      </schemata>
       <includes>.*</includes>
       <forcedTypes>
         <forcedType>
@@ -310,6 +315,7 @@
       <records>true</records>
       <pojos>true</pojos>
       <fluentSetters>true</fluentSetters>
+      <defaultSchema>false</defaultSchema>
     </generate>
   </generator>
 </configuration>

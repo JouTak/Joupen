@@ -23,7 +23,7 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
-          --health-timeout=10s
+          --health-timeout=5s
           --health-retries=30
 
     steps:
@@ -55,29 +55,29 @@ jobs:
 
       - name: Wait for MariaDB
         run: |
-          for i in {1..120}; do
+          for i in {1..60}; do
             if nc -z localhost 3307; then
               echo "TCP 3307 is open on localhost"
               break
             fi
-            echo "Waiting for port 3307 on localhost... ($i/120)"
-            sleep 2
+            echo "Waiting for port 3307 on localhost... ($i/60)"
+            sleep 1
           done || { echo "TCP timeout on localhost:3307"; exit 1; }
-          for i in {1..120}; do
+          for i in {1..60}; do
             if mysqladmin --host=localhost --port=3307 -uroot -proot_password ping --silent 2>/dev/null; then
               echo "MariaDB is ready (root ping)!"
               break
             fi
-            echo "Waiting for MariaDB root ping on localhost:3307... ($i/120)"
-            sleep 2
+            echo "Waiting for MariaDB root ping on localhost:3307... ($i/60)"
+            sleep 1
           done || { echo "Root ping timeout"; exit 1; }
-          for i in {1..60}; do
+          for i in {1..30}; do
             if mysql -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;" 2>/dev/null; then
               echo "User access ready!"
               break
             fi
-            echo "Waiting for user access on localhost:3307... ($i/60)"
-            sleep 2
+            echo "Waiting for user access on localhost:3307... ($i/30)"
+            sleep 1
           done || { echo "User access timeout"; exit 1; }
 
       - name: Ensure DB and grants
@@ -86,6 +86,12 @@ jobs:
           mysql -hlocalhost -P3307 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
           mysql -hlocalhost -P3307 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; GRANT SELECT ON *.* TO 'user'@'%'; FLUSH PRIVILEGES;"
           mysql -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
+
+      - name: Debug Liquibase properties
+        run: |
+          echo "Checking liquibase.properties..."
+          cat target/liquibase.properties || echo "liquibase.properties not found"
+        if: always()
 
       - name: Run Liquibase migrations
         run: |
@@ -96,7 +102,7 @@ jobs:
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen" \
             -Dliquibase.logLevel=debug \
-            org.liquibase:liquibase-maven-plugin:4.29.2:update
+            org.liquibase:liquibase-maven-plugin:4.27.0:update
 
       - name: Generate jOOQ code
         run: |
@@ -106,6 +112,13 @@ jobs:
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen"
+          # Проверка: код schema-less
+          if ls target/generated-sources/jooq/org/joupen/jooq/generated/tables/*.java 2>/dev/null; then
+            echo "jOOQ code generated successfully (schema-less tables found)"
+          else
+            echo "Error: jOOQ generated code is missing or not schema-less"
+            exit 1
+          fi
 
       - name: Test & Package
         run: |
