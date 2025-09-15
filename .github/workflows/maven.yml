@@ -19,29 +19,15 @@ jobs:
           MARIADB_PASSWORD: user_password
           MARIADB_ROOT_PASSWORD: root_password
         ports:
-          - 3307:3306  # Избегаем потенциальных конфликтов
+          - 3307:3306  # Избегаем конфликтов
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=10s
           --health-timeout=10s
           --health-retries=30
-          --memory=512m
-          --cpus=0.5
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Free up disk space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          docker image prune -f
-          df -h
-
-      - name: Check Docker image availability
-        run: |
-          docker pull mariadb:10.11.8 || { echo "Failed to pull mariadb:10.11.8"; exit 1; }
-          docker inspect mariadb:10.11.8
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -54,19 +40,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mariadb-client netcat-openbsd
-          which mysql
-          which mysqladmin
           mysql --version
           mysqladmin --version
 
       - name: Debug container creation
         run: |
+          docker pull mariadb:10.11.8
           docker ps -a
           docker inspect ${{ job.services.mariadb.id }} || true
           docker logs ${{ job.services.mariadb.id }} || true
         if: always()
 
-      - name: Wait for MariaDB (root ping + TCP + user check)
+      - name: Wait for MariaDB
         run: |
           for i in {1..120}; do
             if nc -z mariadb 3307; then
@@ -93,7 +78,7 @@ jobs:
             sleep 2
           done || { echo "User access timeout"; exit 1; }
 
-      - name: Ensure DB and grants exist
+      - name: Ensure DB and grants
         run: |
           mysql -hmariadb -P3307 -uroot -proot_password -e "CREATE DATABASE IF NOT EXISTS Joupen;"
           mysql -hmariadb -P3307 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
@@ -109,13 +94,7 @@ jobs:
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen" \
             -Dliquibase.logLevel=debug \
-            -Dliquibase.connectTimeout=30 \
-            -Dliquibase.socketTimeout=30 \
             org.liquibase:liquibase-maven-plugin:4.29.2:update
-
-      - name: Validate Liquibase properties
-        run: |
-          cat target/liquibase.properties
 
       - name: Generate jOOQ code
         run: |
@@ -125,10 +104,6 @@ jobs:
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen"
-
-      - name: Validate jOOQ config
-        run: |
-          cat target/jooq-config.xml
 
       - name: Test & Package
         run: |
@@ -147,17 +122,7 @@ jobs:
             target/original-JoupenPlugin-*.jar
             target/JoupenPlugin-*.jar
 
-      - name: Dump MariaDB service logs (on failure)
+      - name: Dump MariaDB logs on failure
         if: failure()
         run: |
-          echo "---- docker logs (mariadb) ----"
           docker logs ${{ job.services.mariadb.id }} || true
-
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: |
-            target/surefire-reports/*.xml
-            target/failsafe-reports/*.xml
