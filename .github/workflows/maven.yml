@@ -12,16 +12,16 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:10.11.8  # Явный тег для стабильности
+        image: mariadb:10.11.8
         env:
           MARIADB_DATABASE: Joupen
           MARIADB_USER: user
           MARIADB_PASSWORD: user_password
           MARIADB_ROOT_PASSWORD: root_password
         ports:
-          - 3307:3306  # Избегаем конфликтов
+          - 3307:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
           --health-timeout=10s
           --health-retries=30
@@ -43,52 +43,54 @@ jobs:
           mysql --version
           mysqladmin --version
 
-      - name: Debug container creation
+      - name: Debug container creation and network
         run: |
-          docker pull mariadb:10.11.8
+          docker pull mariadb:10.11.8 || { echo "Failed to pull mariadb:10.11.8"; exit 1; }
           docker ps -a
           docker inspect ${{ job.services.mariadb.id }} || true
           docker logs ${{ job.services.mariadb.id }} || true
+          echo "Checking DNS for mariadb..."
+          getent hosts mariadb || echo "DNS resolution failed for mariadb"
         if: always()
 
       - name: Wait for MariaDB
         run: |
           for i in {1..120}; do
-            if nc -z mariadb 3307; then
-              echo "TCP 3307 is open"
+            if nc -z localhost 3307; then
+              echo "TCP 3307 is open on localhost"
               break
             fi
-            echo "Waiting for port 3307... ($i/120)"
+            echo "Waiting for port 3307 on localhost... ($i/120)"
             sleep 2
-          done || { echo "TCP timeout"; exit 1; }
+          done || { echo "TCP timeout on localhost:3307"; exit 1; }
           for i in {1..120}; do
-            if mysqladmin --host=mariadb --port=3307 -uroot -proot_password ping --silent 2>/dev/null; then
+            if mysqladmin --host=localhost --port=3307 -uroot -proot_password ping --silent 2>/dev/null; then
               echo "MariaDB is ready (root ping)!"
               break
             fi
-            echo "Waiting for MariaDB root ping... ($i/120)"
+            echo "Waiting for MariaDB root ping on localhost:3307... ($i/120)"
             sleep 2
           done || { echo "Root ping timeout"; exit 1; }
           for i in {1..60}; do
-            if mysql -hmariadb -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;" 2>/dev/null; then
+            if mysql -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;" 2>/dev/null; then
               echo "User access ready!"
               break
             fi
-            echo "Waiting for user access... ($i/60)"
+            echo "Waiting for user access on localhost:3307... ($i/60)"
             sleep 2
           done || { echo "User access timeout"; exit 1; }
 
       - name: Ensure DB and grants
         run: |
-          mysql -hmariadb -P3307 -uroot -proot_password -e "CREATE DATABASE IF NOT EXISTS Joupen;"
-          mysql -hmariadb -P3307 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
-          mysql -hmariadb -P3307 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; GRANT SELECT ON *.* TO 'user'@'%'; FLUSH PRIVILEGES;"
-          mysql -hmariadb -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
+          mysql -hlocalhost -P3307 -uroot -proot_password -e "CREATE DATABASE IF NOT EXISTS Joupen;"
+          mysql -hlocalhost -P3307 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
+          mysql -hlocalhost -P3307 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; GRANT SELECT ON *.* TO 'user'@'%'; FLUSH PRIVILEGES;"
+          mysql -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
 
       - name: Run Liquibase migrations
         run: |
           mvn -B -P liquibase-update \
-            -Ddatabase.url="jdbc:mariadb://mariadb:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
+            -Ddatabase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
             -Ddatabase.user="user" \
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
@@ -99,7 +101,7 @@ jobs:
       - name: Generate jOOQ code
         run: |
           mvn -B generate-sources \
-            -Ddatabase.url="jdbc:mariadb://mariadb:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
+            -Ddatabase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
             -Ddatabase.user="user" \
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
@@ -108,7 +110,7 @@ jobs:
       - name: Test & Package
         run: |
           mvn -B verify \
-            -Ddatabase.url="jdbc:mariadb://mariadb:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
+            -Ddatabase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
             -Ddatabase.user="user" \
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
