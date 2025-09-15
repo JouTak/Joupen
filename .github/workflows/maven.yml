@@ -18,9 +18,11 @@ jobs:
           MARIADB_USER: user
           MARIADB_PASSWORD: user_password
           MARIADB_ROOT_PASSWORD: root_password
+        # healthcheck внутри контейнера не обязателен. Мы сами подождём снаружи.
+        # Убираем лишние health-опции, чтобы они не вводили в заблуждение.
         options: >-
-          --health-cmd="mariadb-admin --user=root --password=root_password ping"
-          --health-interval=10s
+          --health-cmd="mariadb-admin ping -proot_password || exit 1"          
+           --health-interval=10s
           --health-timeout=5s
           --health-retries=12
 
@@ -34,23 +36,51 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Install MariaDB client (for wait/check)
+      - name: Install MariaDB client & netcat
         run: |
           sudo apt-get update
-          sudo apt-get install -y mariadb-client
+          sudo apt-get install -y mariadb-client netcat-openbsd
 
-      - name: Wait for MariaDB to be ready
+      # Диагностика на случай фейла: покажем логи сервиса
+      - name: Print service info (debug)
+        if: always()
         run: |
-          for i in {1..40}; do
-            if mariadb-admin --host=mariadb --port=3306 --user=root --password=root_password ping; then
-              echo "MariaDB is ready!"
+          echo "Service container ID:"
+          echo "${{ job.services.mariadb.id }}"
+          echo "---- docker ps ----"
+          docker ps -a || true
+
+      - name: Wait for MariaDB (root ping + TCP)
+        run: |
+          # 1) Ждём, пока порт реально начнёт слушать
+          for i in {1..60}; do
+            if nc -z mariadb 3306; then
+              echo "TCP 3306 is open"
               break
             fi
-            echo "Waiting for MariaDB... ($i/40)"
-            sleep 3
+            echo "Waiting for port 3306... ($i/60)"
+            sleep 2
           done
 
-      # 1) Liquibase migrations
+          # 2) Ждём готовности сервера по root
+          for i in {1..60}; do
+            if mysqladmin --host=mariadb --port=3306 -uroot -proot_password ping 2>/dev/null; then
+              echo "MariaDB is ready (root ping)!"
+              break
+            fi
+            echo "Waiting for MariaDB root ping... ($i/60)"
+            sleep 2
+          done
+
+      # На случай, если переменные окружения ещё не применились — гарантируем БД и доступы
+      - name: Ensure DB and grants exist
+        run: |
+          mysql -hmariadb -P3306 -uroot -proot_password -e "CREATE DATABASE IF NOT EXISTS Joupen;"
+          mysql -hmariadb -P3306 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
+          mysql -hmariadb -P3306 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; FLUSH PRIVILEGES;"
+          mysql -hmariadb -P3306 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
+
+      # 1) Liquibase migrations (через Maven plugin)
       - name: Run Liquibase migrations (Maven plugin)
         run: |
           mvn -B -P liquibase-update \
@@ -59,7 +89,8 @@ jobs:
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen" \
-            org.liquibase:liquibase-maven-plugin:4.27.0:update
+            org.liquibase:liquibase-maven-plugin:4.27.0:update \
+            -Dliquibase.logLevel=info
 
       # 2) jOOQ codegen
       - name: Generate jOOQ code
@@ -71,7 +102,7 @@ jobs:
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen"
 
-      # 3) Unit + Integration tests, Package
+      # 3) Tests & Package
       - name: Test & Package
         run: |
           mvn -B verify \
@@ -88,6 +119,13 @@ jobs:
           path: |
             target/original-JoupenPlugin-*.jar
             target/JoupenPlugin-*.jar
+
+      # Если что-то упало — покажем логи MariaDB для диагностики
+      - name: Dump MariaDB service logs (on failure)
+        if: failure()
+        run: |
+          echo "---- docker logs (mariadb) ----"
+          docker logs "${{ job.services.mariadb.id }}" || true
 
       - name: Upload test reports
         if: always()
