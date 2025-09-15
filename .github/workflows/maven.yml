@@ -87,6 +87,17 @@ jobs:
           mysql -hlocalhost -P3307 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; GRANT SELECT ON *.* TO 'user'@'%'; FLUSH PRIVILEGES;"
           mysql -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
 
+      - name: Debug Maven properties
+        run: |
+          echo "Maven properties:"
+          mvn help:evaluate -Dexpression=database.url -q -DforceStdout
+          mvn help:evaluate -Dexpression=database.user -q -DforceStdout
+          mvn help:evaluate -Dexpression=database.password -q -DforceStdout
+          mvn help:evaluate -Dexpression=database.driver -q -DforceStdout
+          mvn help:evaluate -Dexpression=database.schema -q -DforceStdout
+          mvn help:evaluate -Dexpression=liquibase.properties.file -q -DforceStdout
+        if: always()
+
       - name: Debug Liquibase properties
         run: |
           echo "Checking liquibase.properties..."
@@ -101,6 +112,11 @@ jobs:
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen" \
+            -Dliquibase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
+            -Dliquibase.username="user" \
+            -Dliquibase.password="user_password" \
+            -Dliquibase.driver="org.mariadb.jdbc.Driver" \
+            -Dliquibase.changeLogFile="src/main/resources/db/changelog/db.changelog-master.yaml" \
             -Dliquibase.logLevel=debug \
             org.liquibase:liquibase-maven-plugin:4.27.0:update
 

@@ -198,7 +198,6 @@
 
     <build>
         <plugins>
-
             <!-- Читаем plugins/joupen/config.yml, генерим target/jooq-config.xml и target/liquibase.properties -->
             <plugin>
                 <groupId>org.codehaus.gmavenplus</groupId>
@@ -226,57 +225,64 @@
                         <configuration>
                             <scripts>
                                 <script><![CDATA[
-  import org.yaml.snakeyaml.Yaml
-  import java.nio.file.*
+import org.yaml.snakeyaml.Yaml
+import java.nio.file.*
 
-  def cfgPath = Paths.get(project.basedir.toString(), "plugins", "joupen", "config.yml")
-  if (!Files.exists(cfgPath)) throw new RuntimeException("YAML config not found: " + cfgPath)
+def cfgPath = Paths.get(project.basedir.toString(), "plugins", "joupen", "config.yml")
+def yaml = new Yaml()
+def map = [:]
+def db = [:]
 
-  def yaml = new Yaml()
-  def map = yaml.load(Files.newInputStream(cfgPath)) ?: [:]
-  def db  = (map["database"] instanceof Map) ? map["database"] : [:]
+if (Files.exists(cfgPath)) {
+    map = yaml.load(Files.newInputStream(cfgPath)) ?: [:]
+    db = (map["database"] instanceof Map) ? map["database"] : [:]
+} else {
+    println "[WARNING] YAML config not found at ${cfgPath}, using default properties"
+}
 
-  // helper: eff = CLI (-Ddatabase.*) -> YAML -> defaults(from <properties>)
-  def eff = [:]
-  ["url","user","password","driver","schema"].each { k ->
-    def cli   = project.properties.getProperty("database.${k}")              // из -D
-    def yml   = (db[k] != null ? db[k].toString().trim() : null)            // из YAML
-    def dflt  = project.properties.getProperty("database.${k}")             // дефолты уже объявлены в <properties>
-    def val   = (cli && cli.trim()) ? cli.trim() : (yml && yml.trim() ? yml : dflt)
+// helper: eff = CLI (-Ddatabase.*) -> YAML -> defaults(from <properties>)
+def eff = [:]
+["url", "user", "password", "driver", "schema"].each { k ->
+    def cli = project.properties.getProperty("database.${k}")
+    def yml = (db[k] != null ? db[k].toString().trim() : null)
+    def dflt = project.properties.getProperty("database.${k}")
+    def val = (cli && cli.trim()) ? cli.trim() : (yml && yml.trim() ? yml : dflt)
     if (val != null && val.toString().trim()) {
-      project.properties.setProperty("database.${k}", val.toString().trim())
-      eff[k] = val.toString().trim()
+        project.properties.setProperty("database.${k}", val.toString().trim())
+        eff[k] = val.toString().trim()
     }
-  }
+}
 
-  println "[db-props] url="    + (eff.url    ?: "<unset>")
-  println "[db-props] schema=" + (eff.schema ?: "<unset>")
+println "[db-props] url=" + (eff.url ?: "<unset>")
+println "[db-props] schema=" + (eff.schema ?: "<unset>")
+println "[db-props] user=" + (eff.user ?: "<unset>")
+println "[db-props] password=" + (eff.password ?: "<unset>")
+println "[db-props] driver=" + (eff.driver ?: "<unset>")
 ]]></script>
 
-
-                                <!-- 2) генерим jOOQ конфиг (без CDATA, с экранированием значений) -->
+                                <!-- Generate jOOQ config -->
                                 <script><![CDATA[
-  import java.nio.file.*
+import java.nio.file.*
 
-  String xmlEscape(String s) {
+String xmlEscape(String s) {
     if (s == null) return ""
-    s.replace("&","&amp;")
-     .replace("<","&lt;")
-     .replace(">","&gt;")
-     .replace("\"","&quot;")
-  }
+    s.replace("&", "&amp;")
+     .replace("<", "&lt;")
+     .replace(">", "&gt;")
+     .replace("\"", "&quot;")
+}
 
-  def outDir = Paths.get(project.build.directory)
-  Files.createDirectories(outDir)
-  def jooqCfg = outDir.resolve("jooq-config.xml")
+def outDir = Paths.get(project.build.directory)
+Files.createDirectories(outDir)
+def jooqCfg = outDir.resolve("jooq-config.xml")
 
-  def url    = project.properties.getProperty("database.url") ?: ""
-  def user   = project.properties.getProperty("database.user") ?: ""
-  def pass   = project.properties.getProperty("database.password") ?: ""
-  def driver = project.properties.getProperty("database.driver","org.mariadb.jdbc.Driver") ?: ""
-  def schema = project.properties.getProperty("database.schema","Joupen") ?: ""
+def url = project.properties.getProperty("database.url") ?: ""
+def user = project.properties.getProperty("database.user") ?: ""
+def pass = project.properties.getProperty("database.password") ?: ""
+def driver = project.properties.getProperty("database.driver", "org.mariadb.jdbc.Driver") ?: ""
+def schema = project.properties.getProperty("database.schema", "Joupen") ?: ""
 
-  def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <configuration>
   <jdbc>
     <driver>${xmlEscape(driver)}</driver>
@@ -321,34 +327,36 @@
 </configuration>
 """
 
-  Files.writeString(jooqCfg, xml)
-  project.properties.setProperty("jooq.config.file", jooqCfg.toString())
-  println "[jooq-config] written: " + jooqCfg
+Files.writeString(jooqCfg, xml)
+project.properties.setProperty("jooq.config.file", jooqCfg.toString())
+println "[jooq-config] written: " + jooqCfg
 ]]></script>
 
-
-                                <!-- 3) генерим liquibase.properties -->
+                                <!-- Generate liquibase.properties -->
                                 <script><![CDATA[
-                  import java.nio.file.*
-                  def outDir = Paths.get(project.build.directory)
-                  Files.createDirectories(outDir)
-                  def lbProps = outDir.resolve("liquibase.properties")
+import java.nio.file.*
 
-                  def url    = project.properties.getProperty("database.url")
-                  def user   = project.properties.getProperty("database.user")
-                  def pass   = project.properties.getProperty("database.password")
-                  def driver = project.properties.getProperty("database.driver","org.mariadb.jdbc.Driver")
+def outDir = Paths.get(project.build.directory)
+Files.createDirectories(outDir)
+def lbProps = outDir.resolve("liquibase.properties")
 
-                  def content = new StringBuilder()
-                  content << "url=${url}\n"
-                  content << "username=${user}\n"
-                  content << "password=${pass}\n"
-                  content << "driver=${driver}\n"
-                  content << "changeLogFile=src/main/resources/db/changelog/db.changelog-master.yaml\n"
-                  Files.writeString(lbProps, content.toString())
-                  project.properties.setProperty("liquibase.properties.file", lbProps.toString())
-                  println "[liquibase-properties] written: " + lbProps
-                ]]></script>
+def url = project.properties.getProperty("database.url") ?: ""
+def user = project.properties.getProperty("database.user") ?: ""
+def pass = project.properties.getProperty("database.password") ?: ""
+def driver = project.properties.getProperty("database.driver", "org.mariadb.jdbc.Driver") ?: ""
+
+def content = new StringBuilder()
+content << "liquibase.url=${url}\n"
+content << "liquibase.username=${user}\n"
+content << "liquibase.password=${pass}\n"
+content << "liquibase.driver=${driver}\n"
+content << "liquibase.changeLogFile=src/main/resources/db/changelog/db.changelog-master.yaml\n"
+
+Files.writeString(lbProps, content.toString())
+project.properties.setProperty("liquibase.properties.file", lbProps.toString())
+println "[liquibase-properties] written: " + lbProps
+println "[liquibase-properties] content:\n" + content.toString()
+]]></script>
                             </scripts>
                         </configuration>
                     </execution>
@@ -507,6 +515,11 @@
                 <configuration>
                     <propertyFile>${liquibase.properties.file}</propertyFile>
                     <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
+                    <url>${database.url}</url>
+                    <username>${database.user}</username>
+                    <password>${database.password}</password>
+                    <driver>${database.driver}</driver>
+                    <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -592,6 +605,11 @@
                         <configuration>
                             <propertyFile>${liquibase.properties.file}</propertyFile>
                             <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
+                            <url>${database.url}</url>
+                            <username>${database.user}</username>
+                            <password>${database.password}</password>
+                            <driver>${database.driver}</driver>
+                            <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
                         </configuration>
                         <dependencies>
                             <dependency>
