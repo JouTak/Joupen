@@ -12,19 +12,19 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:10.6
+        image: mariadb:10.11  # Обновлено до 10.11 для стабильности
         env:
           MARIADB_DATABASE: Joupen
           MARIADB_USER: user
           MARIADB_PASSWORD: user_password
           MARIADB_ROOT_PASSWORD: root_password
-        # healthcheck внутри контейнера не обязателен. Мы сами подождём снаружи.
-        # Убираем лишние health-опции, чтобы они не вводили в заблуждение.
+        ports:
+          - 3306:3306
         options: >-
-          --health-cmd="mariadb-admin ping -proot_password || exit 1"          
-           --health-interval=10s
-          --health-timeout=5s
-          --health-retries=12
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot_password --silent"
+          --health-interval=10s
+          --health-timeout=10s
+          --health-retries=30  # Увеличено до 5 минут ожидания
 
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +41,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mariadb-client netcat-openbsd
 
-      # Диагностика на случай фейла: покажем логи сервиса
       - name: Print service info (debug)
         if: always()
         run: |
@@ -50,38 +49,46 @@ jobs:
           echo "---- docker ps ----"
           docker ps -a || true
 
-      - name: Wait for MariaDB (root ping + TCP)
+      - name: Wait for MariaDB (root ping + TCP + user check)
         run: |
-          # 1) Ждём, пока порт реально начнёт слушать
-          for i in {1..60}; do
+          # 1) Ждём, пока порт начнёт слушать
+          for i in {1..120}; do
             if nc -z mariadb 3306; then
               echo "TCP 3306 is open"
               break
             fi
-            echo "Waiting for port 3306... ($i/60)"
+            echo "Waiting for port 3306... ($i/120)"
             sleep 2
-          done
+          done || { echo "TCP timeout"; exit 1; }
 
           # 2) Ждём готовности сервера по root
-          for i in {1..60}; do
-            if mysqladmin --host=mariadb --port=3306 -uroot -proot_password ping 2>/dev/null; then
+          for i in {1..120}; do
+            if mysqladmin --host=mariadb --port=3306 -uroot -proot_password ping --silent 2>/dev/null; then
               echo "MariaDB is ready (root ping)!"
               break
             fi
-            echo "Waiting for MariaDB root ping... ($i/60)"
+            echo "Waiting for MariaDB root ping... ($i/120)"
             sleep 2
-          done
+          done || { echo "Root ping timeout"; exit 1; }
 
-      # На случай, если переменные окружения ещё не применились — гарантируем БД и доступы
+          # 3) Проверяем доступ для user
+          for i in {1..60}; do
+            if mysql -hmariadb -P3306 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;" 2>/dev/null; then
+              echo "User access ready!"
+              break
+            fi
+            echo "Waiting for user access... ($i/60)"
+            sleep 2
+          done || { echo "User access timeout"; exit 1; }
+
       - name: Ensure DB and grants exist
         run: |
           mysql -hmariadb -P3306 -uroot -proot_password -e "CREATE DATABASE IF NOT EXISTS Joupen;"
           mysql -hmariadb -P3306 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
-          mysql -hmariadb -P3306 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; FLUSH PRIVILEGES;"
+          mysql -hmariadb -P3306 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; GRANT SELECT ON *.* TO 'user'@'%'; FLUSH PRIVILEGES;"
           mysql -hmariadb -P3306 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
 
-      # 1) Liquibase migrations (через Maven plugin)
-      - name: Run Liquibase migrations (Maven plugin)
+      - name: Run Liquibase migrations
         run: |
           mvn -B -P liquibase-update \
             -Ddatabase.url="jdbc:mariadb://mariadb:3306/Joupen" \
@@ -89,24 +96,32 @@ jobs:
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen" \
-            org.liquibase:liquibase-maven-plugin:4.27.0:update \
-            -Dliquibase.logLevel=info
+            -Dliquibase.logLevel=debug \
+            -Dliquibase.connectTimeout=30 \
+            -Dliquibase.socketTimeout=30 \
+            org.liquibase:liquibase-maven-plugin:4.29.2:update  # Обновлено до 4.29.2
 
-      # 2) jOOQ codegen
+      - name: Validate Liquibase properties
+        run: |
+          cat target/liquibase.properties  # Для отладки, проверяем сгенерированный файл
+
       - name: Generate jOOQ code
         run: |
           mvn -B generate-sources \
-            -Ddatabase.url="jdbc:mariadb://mariadb:3306/Joupen" \
+            -Ddatabase.url="jdbc:mariadb://mariadb:3306/Joupen?connectTimeout=30000&socketTimeout=60000" \
             -Ddatabase.user="user" \
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
             -Ddatabase.schema="Joupen"
 
-      # 3) Tests & Package
+      - name: Validate jOOQ config
+        run: |
+          cat target/jooq-config.xml  # Для отладки, проверяем сгенерированный файл
+
       - name: Test & Package
         run: |
           mvn -B verify \
-            -Ddatabase.url="jdbc:mariadb://mariadb:3306/Joupen" \
+            -Ddatabase.url="jdbc:mariadb://mariadb:3306/Joupen?connectTimeout=30000&socketTimeout=60000" \
             -Ddatabase.user="user" \
             -Ddatabase.password="user_password" \
             -Ddatabase.driver="org.mariadb.jdbc.Driver" \
@@ -120,7 +135,6 @@ jobs:
             target/original-JoupenPlugin-*.jar
             target/JoupenPlugin-*.jar
 
-      # Если что-то упало — покажем логи MariaDB для диагностики
       - name: Dump MariaDB service logs (on failure)
         if: failure()
         run: |
