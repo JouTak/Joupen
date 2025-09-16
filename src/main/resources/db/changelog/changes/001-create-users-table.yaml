@@ -35,5 +35,3 @@ databaseChangeLog:
               - column:
                   name: paid
                   type: BOOLEAN
-                  constraints:
-                    nullable: false

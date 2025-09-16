@@ -299,6 +299,15 @@ def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
           <key>changeLogParameters.contexts</key>
           <value>!test</value>
         </property>
+        <!-- Добавленные свойства для регистра -->
+        <property>
+          <key>renderNameStyle</key>
+          <value>LOWER</value>
+        </property>
+        <property>
+          <key>renderFormatted</key>
+          <value>false</value>
+        </property>
       </properties>
       <includes>.*</includes>
       <forcedTypes>
@@ -312,6 +321,27 @@ def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
           <objectType>ALL</objectType>
         </forcedType>
       </forcedTypes>
+      <!-- Добавленная стратегия именования -->
+      <strategy>
+        <matchers>
+          <tables>
+            <table>
+              <expression>.*</expression>
+              <tableIdentifier>
+                <case>LOWER</case>
+              </tableIdentifier>
+            </table>
+          </tables>
+          <fields>
+            <field>
+              <expression>.*</expression>
+              <fieldIdentifier>
+                <case>LOWER</case>
+              </fieldIdentifier>
+            </field>
+          </fields>
+        </matchers>
+      </strategy>
     </database>
     <target>
       <packageName>org.joupen.jooq.generated</packageName>
