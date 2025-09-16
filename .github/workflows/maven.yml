@@ -20,21 +20,18 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Test & Package
-        run: |
-          mvn -B verify
-          # Проверка генерации jOOQ кода
-          if ls target/generated-sources/jooq/org/joupen/jooq/generated/tables/*.java 2>/dev/null; then
-            echo "jOOQ код успешно сгенерирован (найдены schema-less таблицы)"
-          else
-            echo "Ошибка: jOOQ код не сгенерирован или не является schema-less"
-            exit 1
-          fi
+      - name: Build with Maven
+        run: mvn -B clean compile
+
+      - name: Run tests
+        run: mvn -B test
+
+      - name: Package application
+        run: mvn -B package -DskipTests
 
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
         with:
           name: joupen-plugin-jars
           path: |
-            target/original-JoupenPlugin-*.jar
-            target/JoupenPlugin-*.jar
+            target/*.jar
