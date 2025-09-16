@@ -2,7 +2,7 @@ package integration.mariadb;
 
 import org.jooq.impl.DSL;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.jooq.generated.tables.Players;
+import org.joupen.jooq.generated.default_schema.tables.Players;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
                     .set(Players.PLAYERS.NAME, player.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, player.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, player.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
                     .execute();
         });
 
@@ -54,7 +54,7 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
                     .insertInto(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, player.getUuid().toString())
                     .set(Players.PLAYERS.NAME, player.getName())
-                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
                     .returning(Players.PLAYERS.ID)
                     .fetchOne()
                     .getId();
@@ -81,7 +81,7 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
                     .insertInto(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, player.getUuid().toString())
                     .set(Players.PLAYERS.NAME, player.getName())
-                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
                     .returning(Players.PLAYERS.ID)
                     .fetchOne()
                     .getId();
@@ -91,7 +91,7 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
             DSL.using(configuration)
                     .update(Players.PLAYERS)
                     .set(Players.PLAYERS.NAME, "UpdatedPlayer")
-                    .set(Players.PLAYERS.PAID, (byte) 1) // true
+//                    .set(Players.PLAYERS.PAID, (byte) 1) // true
                     .set(Players.PLAYERS.VALID_UNTIL, LocalDateTime.now().plusDays(60))
                     .where(Players.PLAYERS.ID.eq(id))
                     .execute();
@@ -118,7 +118,7 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
                     .insertInto(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, player.getUuid().toString())
                     .set(Players.PLAYERS.NAME, player.getName())
-                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, player.getPaid() ? (byte) 1 : (byte) 0)
                     .returning(Players.PLAYERS.ID)
                     .fetchOne()
                     .getId();

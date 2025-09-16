@@ -10,7 +10,7 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
-import org.joupen.jooq.generated.tables.Players;
+import org.joupen.jooq.generated.default_schema.tables.Players;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

@@ -10,22 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      mariadb:
-        image: mariadb:10.11.8
-        env:
-          MARIADB_DATABASE: Joupen
-          MARIADB_USER: user
-          MARIADB_PASSWORD: user_password
-          MARIADB_ROOT_PASSWORD: root_password
-        ports:
-          - 3307:3306
-        options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=30
-
     steps:
       - uses: actions/checkout@v4
 
@@ -36,120 +20,16 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Install MariaDB client & netcat
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mariadb-client netcat-openbsd
-          mariadb --version
-          mariadb-admin --version
-
-      - name: Debug container creation and network
-        if: ${{ always() && !env.ACT }}
-        run: |
-          docker pull mariadb:10.11.8 || { echo "Failed to pull mariadb:10.11.8"; exit 1; }
-          docker ps -a
-          docker inspect ${{ job.services.mariadb.id }} || true
-          docker logs ${{ job.services.mariadb.id }} || true
-          echo "Checking DNS for mariadb..."
-          getent hosts mariadb || echo "DNS resolution failed for mariadb"
-          echo "Checking port 3307..."
-          nc -z localhost 3307 && echo "Port 3307 is open" || echo "Port 3307 is not open"
-
-      - name: Debug MariaDB environment
-        run: |
-          docker exec ${{ job.services.mariadb.id }} env
-
-      - name: Wait for MariaDB
-        run: |
-          for i in {1..120}; do
-            if nc -z localhost 3307; then
-              echo "TCP 3307 is open on localhost"
-              break
-            fi
-            echo "Waiting for port 3307 on localhost... ($i/120)"
-            sleep 1
-          done || { echo "TCP timeout on localhost:3307"; exit 1; }
-          for i in {1..120}; do
-            if mariadb-admin --protocol=TCP --host=localhost --port=3307 -uroot -proot_password ping --silent 2>/dev/null; then
-              echo "MariaDB is ready (root ping)!"
-              break
-            fi
-            echo "Waiting for MariaDB root ping on localhost:3307... ($i/120)"
-            sleep 1
-          done || { echo "Root ping timeout"; exit 1; }
-          for i in {1..30}; do
-            if mariadb --protocol=TCP -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;" 2>/dev/null; then
-              echo "User access ready!"
-              break
-            fi
-            echo "Waiting for user access on localhost:3307... ($i/30)"
-            sleep 1
-          done || { echo "User access timeout"; exit 1; }
-
-      - name: Ensure DB and grants
-        run: |
-          mariadb --protocol=TCP -hlocalhost -P3307 -uroot -proot_password -e "CREATE DATABASE IF NOT EXISTS Joupen;"
-          mariadb --protocol=TCP -hlocalhost -P3307 -uroot -proot_password -e "CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'user_password';"
-          mariadb --protocol=TCP -hlocalhost -P3307 -uroot -proot_password -e "GRANT ALL ON Joupen.* TO 'user'@'%'; GRANT SELECT ON *.* TO 'user'@'%'; FLUSH PRIVILEGES;"
-          mariadb --protocol=TCP -hlocalhost -P3307 -uuser -puser_password -D Joupen -e "SELECT 1 as ok;"
-
-      - name: Debug Maven properties
-        run: |
-          echo "Maven properties:"
-          mvn help:evaluate -Dexpression=database.url -q -DforceStdout
-          mvn help:evaluate -Dexpression=database.user -q -DforceStdout
-          mvn help:evaluate -Dexpression=database.password -q -DforceStdout
-          mvn help:evaluate -Dexpression=database.driver -q -DforceStdout
-          mvn help:evaluate -Dexpression=database.schema -q -DforceStdout
-          mvn help:evaluate -Dexpression=liquibase.properties.file -q -DforceStdout
-        if: always()
-
-      - name: Debug Liquibase properties
-        run: |
-          echo "Checking liquibase.properties..."
-          cat target/liquibase.properties || echo "liquibase.properties not found"
-        if: always()
-
-      - name: Run Liquibase migrations
-        run: |
-          mvn -B -P liquibase-update \
-            -Ddatabase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
-            -Ddatabase.user="user" \
-            -Ddatabase.password="user_password" \
-            -Ddatabase.driver="org.mariadb.jdbc.Driver" \
-            -Ddatabase.schema="Joupen" \
-            -Dliquibase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
-            -Dliquibase.username="user" \
-            -Dliquibase.password="user_password" \
-            -Dliquibase.driver="org.mariadb.jdbc.Driver" \
-            -Dliquibase.changeLogFile="src/main/resources/db/changelog/db.changelog-master.yaml" \
-            -Dliquibase.logLevel=debug \
-            org.liquibase:liquibase-maven-plugin:4.27.0:update
-
-      - name: Generate jOOQ code
-        run: |
-          mvn -B generate-sources \
-            -Ddatabase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
-            -Ddatabase.user="user" \
-            -Ddatabase.password="user_password" \
-            -Ddatabase.driver="org.mariadb.jdbc.Driver" \
-            -Ddatabase.schema="Joupen"
-          # Проверка: код schema-less
-          if ls target/generated-sources/jooq/org/joupen/jooq/generated/tables/*.java 2>/dev/null; then
-            echo "jOOQ code generated successfully (schema-less tables found)"
-          else
-            echo "Error: jOOQ generated code is missing or not schema-less"
-            exit 1
-          fi
-
       - name: Test & Package
         run: |
-          mvn -B verify \
-            -Ddatabase.url="jdbc:mariadb://localhost:3307/Joupen?connectTimeout=30000&socketTimeout=60000" \
-            -Ddatabase.user="user" \
-            -Ddatabase.password="user_password" \
-            -Ddatabase.driver="org.mariadb.jdbc.Driver" \
-            -Ddatabase.schema="Joupen"
+          mvn -B verify
+          # Проверка генерации jOOQ кода
+          if ls target/generated-sources/jooq/org/joupen/jooq/generated/tables/*.java 2>/dev/null; then
+            echo "jOOQ код успешно сгенерирован (найдены schema-less таблицы)"
+          else
+            echo "Ошибка: jOOQ код не сгенерирован или не является schema-less"
+            exit 1
+          fi
 
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
@@ -158,10 +38,3 @@ jobs:
           path: |
             target/original-JoupenPlugin-*.jar
             target/JoupenPlugin-*.jar
-
-      - name: Dump MariaDB logs on failure
-        if: failure()
-        run: |
-          docker logs ${{ job.services.mariadb.id }} || true
-          docker exec ${{ job.services.mariadb.id }} cat /var/log/mysql/mariadb.err || true
-          docker exec ${{ job.services.mariadb.id }} cat /var/log/mysql/mariadb.log || true

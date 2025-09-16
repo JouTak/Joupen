@@ -20,13 +20,6 @@
         <mariadb.version>3.4.1</mariadb.version>
         <mapstruct.version>1.6.0</mapstruct.version>
         <liquibase.version>4.27.0</liquibase.version>
-
-        <!-- дефолты, если в YAML чего-то нет -->
-        <database.url>jdbc:mariadb://localhost:3306/Joupen</database.url>
-        <database.user>user</database.user>
-        <database.password>user_password</database.password>
-        <database.schema>Joupen</database.schema>
-        <database.driver>org.mariadb.jdbc.Driver</database.driver>
     </properties>
 
     <dependencies>
@@ -77,6 +70,12 @@
             <version>${jooq.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq-meta-extensions-liquibase</artifactId>
+            <version>${jooq.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- HikariCP -->
         <dependency>
@@ -112,14 +111,14 @@
             <version>2.17.2</version>
         </dependency>
 
-        <!-- SnakeYAML (используем и в коде, и в groovy-скрипте) -->
+        <!-- SnakeYAML -->
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.2</version>
         </dependency>
 
-        <!-- Тесты / прочее -->
+        <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -144,14 +143,12 @@
             <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>com.github.seeseemelk</groupId>
             <artifactId>MockBukkit-v1.20</artifactId>
             <version>3.33.0</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>com.github.t9t.minecraft-rcon-client</groupId>
             <artifactId>minecraft-rcon-client</artifactId>
@@ -164,7 +161,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
@@ -183,7 +179,6 @@
             <version>1.20.1</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -198,7 +193,7 @@
 
     <build>
         <plugins>
-            <!-- Читаем plugins/joupen/config.yml, генерим target/jooq-config.xml и target/liquibase.properties -->
+            <!-- GMavenPlus: Load config and generate files -->
             <plugin>
                 <groupId>org.codehaus.gmavenplus</groupId>
                 <artifactId>gmavenplus-plugin</artifactId>
@@ -240,7 +235,7 @@ if (Files.exists(cfgPath)) {
     println "[WARNING] YAML config not found at ${cfgPath}, using default properties"
 }
 
-// helper: eff = CLI (-Ddatabase.*) -> YAML -> defaults(from <properties>)
+// Helper: effective = CLI (-Ddatabase.*) -> YAML -> defaults (from <properties>)
 def eff = [:]
 ["url", "user", "password", "driver", "schema"].each { k ->
     def cli = project.properties.getProperty("database.${k}")
@@ -276,29 +271,35 @@ def outDir = Paths.get(project.build.directory)
 Files.createDirectories(outDir)
 def jooqCfg = outDir.resolve("jooq-config.xml")
 
-def url = project.properties.getProperty("database.url") ?: ""
-def user = project.properties.getProperty("database.user") ?: ""
-def pass = project.properties.getProperty("database.password") ?: ""
-def driver = project.properties.getProperty("database.driver", "org.mariadb.jdbc.Driver") ?: ""
 def schema = project.properties.getProperty("database.schema", "Joupen") ?: ""
 
 def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <configuration>
-  <jdbc>
-    <driver>${xmlEscape(driver)}</driver>
-    <url>${xmlEscape(url)}</url>
-    <user>${xmlEscape(user)}</user>
-    <password>${xmlEscape(pass)}</password>
-  </jdbc>
   <generator>
     <database>
-      <name>org.jooq.meta.mariadb.MariaDBDatabase</name>
-      <schemata>
-        <schema>
-          <inputSchema>${xmlEscape(schema)}</inputSchema>
-          <outputSchemaToDefault>true</outputSchemaToDefault>
-        </schema>
-      </schemata>
+      <name>org.jooq.meta.extensions.liquibase.LiquibaseDatabase</name>
+      <properties>
+        <property>
+          <key>rootPath</key>
+          <value>${xmlEscape(project.basedir.toString())}/src/main/resources/db/changelog</value>
+        </property>
+        <property>
+          <key>scripts</key>
+          <value>db.changelog-master.yaml</value>
+        </property>
+        <property>
+          <key>includeLiquibaseTables</key>
+          <value>false</value>
+        </property>
+        <property>
+          <key>database.liquibaseSchemaName</key>
+          <value>${xmlEscape(schema)}</value>
+        </property>
+        <property>
+          <key>changeLogParameters.contexts</key>
+          <value>!test</value>
+        </property>
+      </properties>
       <includes>.*</includes>
       <forcedTypes>
         <forcedType>
@@ -314,7 +315,7 @@ def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     </database>
     <target>
       <packageName>org.joupen.jooq.generated</packageName>
-      <directory>${xmlEscape(project.build.directory)}/generated-sources/jooq</directory>
+      <directory>${xmlEscape(project.build.directory.toString())}/generated-sources/jooq</directory>
     </target>
     <generate>
       <javaTimeTypes>true</javaTimeTypes>
@@ -363,7 +364,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                 </executions>
             </plugin>
 
-            <!-- Компилятор -->
+            <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -391,7 +392,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                 </configuration>
             </plugin>
 
-            <!-- Тесты -->
+            <!-- Surefire (Tests) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -440,7 +441,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                 </executions>
             </plugin>
 
-            <!-- Ресурсы / копирование файлов -->
+            <!-- Resources -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -507,7 +508,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                 </executions>
             </plugin>
 
-            <!-- Liquibase: читаем propertyFile, чтобы не зависеть от ранней интерполяции -->
+            <!-- Liquibase -->
             <plugin>
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-maven-plugin</artifactId>
@@ -520,6 +521,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                     <password>${database.password}</password>
                     <driver>${database.driver}</driver>
                     <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
+                    <searchPath>${project.basedir}/src/main/resources/db/changelog</searchPath>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -530,7 +532,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                 </dependencies>
             </plugin>
 
-            <!-- jOOQ codegen: читаем заранее сгенерированный конфиг -->
+            <!-- jOOQ Codegen -->
             <plugin>
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq-codegen-maven</artifactId>
@@ -547,9 +549,26 @@ println "[liquibase-properties] content:\n" + content.toString()
                         </configuration>
                     </execution>
                 </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jooq</groupId>
+                        <artifactId>jooq-meta-extensions-liquibase</artifactId>
+                        <version>${jooq.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.liquibase</groupId>
+                        <artifactId>liquibase-core</artifactId>
+                        <version>${liquibase.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.mariadb.jdbc</groupId>
+                        <artifactId>mariadb-java-client</artifactId>
+                        <version>${mariadb.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
-            <!-- добавляем target/generated-sources/jooq -->
+            <!-- Add generated sources -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -568,7 +587,6 @@ println "[liquibase-properties] content:\n" + content.toString()
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
 
         <resources>
@@ -610,6 +628,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                             <password>${database.password}</password>
                             <driver>${database.driver}</driver>
                             <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
+                            <searchPath>${project.basedir}/src/main/resources/db/changelog</searchPath>
                         </configuration>
                         <dependencies>
                             <dependency>

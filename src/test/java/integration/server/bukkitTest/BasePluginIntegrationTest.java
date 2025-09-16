@@ -13,7 +13,7 @@ import org.joupen.JoupenPlugin;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
 import org.joupen.dto.PlayerDto;
-import org.joupen.jooq.generated.tables.Players;
+import org.joupen.jooq.generated.default_schema.tables.Players;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.repository.impl.PlayerRepositoryDbImpl;
 import org.joupen.utils.JoupenProperties;

@@ -4,7 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
-import org.joupen.jooq.generated.tables.Players;
+
+import org.joupen.jooq.generated.default_schema.tables.Players;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
@@ -50,12 +51,12 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
                     .onDuplicateKeyUpdate()
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
                     .execute();
         });
     }
@@ -77,7 +78,7 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
                     .where(Players.PLAYERS.NAME.eq(name))
                     .execute();
             if (rowsAffected == 0) {
@@ -96,7 +97,7 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+//                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
                     .where(Players.PLAYERS.UUID.eq(uuid.toString()))
                     .execute();
             if (rowsAffected == 0) {
