@@ -9,6 +9,8 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
+import liquibase.resource.CompositeResourceAccessor;
+import liquibase.resource.FileSystemResourceAccessor;
 import org.joupen.JoupenPlugin;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
@@ -60,11 +62,16 @@ public abstract class BasePluginIntegrationTest {
 
         System.out.println("MariaDB JDBC URL: " + mariaDbJdbcUrl);
 
+        // Создаем CompositeResourceAccessor с FileSystemResourceAccessor для поиска файлов
+        FileSystemResourceAccessor fileSystemAccessor = new FileSystemResourceAccessor("target/classes/db/changelog");
+        ClassLoaderResourceAccessor classLoaderAccessor = new ClassLoaderResourceAccessor();
+        CompositeResourceAccessor resourceAccessor = new CompositeResourceAccessor(fileSystemAccessor, classLoaderAccessor);
+
         Database database = DatabaseFactory.getInstance()
                 .findCorrectDatabaseImplementation(new JdbcConnection(mariaDB.createConnection("")));
         Liquibase liquibase = new Liquibase(
                 "db/changelog/db.changelog-master.yaml",
-                new ClassLoaderResourceAccessor(),
+                resourceAccessor,
                 database
         );
         liquibase.update("");
