@@ -2,7 +2,7 @@ package integration.mariadb;
 
 import org.jooq.impl.DSL;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.jooq.generated.default_schema.tables.Players;
+import org.joupen.jooq.generated.tables.Players;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

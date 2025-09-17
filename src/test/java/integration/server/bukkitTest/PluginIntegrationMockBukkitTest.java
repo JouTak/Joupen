@@ -5,7 +5,7 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.jooq.generated.default_schema.tables.Players;
+import org.joupen.jooq.generated.tables.Players;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;

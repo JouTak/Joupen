@@ -14,12 +14,12 @@
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
         <jooq.version>3.19.10</jooq.version>
         <hikari.version>5.1.0</hikari.version>
         <mariadb.version>3.4.1</mariadb.version>
         <mapstruct.version>1.6.0</mapstruct.version>
         <liquibase.version>4.27.0</liquibase.version>
+        <database.schema>Joupen</database.schema>
     </properties>
 
     <dependencies>
@@ -193,207 +193,6 @@
 
     <build>
         <plugins>
-            <!-- GMavenPlus: Load config and generate files -->
-            <plugin>
-                <groupId>org.codehaus.gmavenplus</groupId>
-                <artifactId>gmavenplus-plugin</artifactId>
-                <version>3.0.2</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.apache.groovy</groupId>
-                        <artifactId>groovy</artifactId>
-                        <version>4.0.23</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.yaml</groupId>
-                        <artifactId>snakeyaml</artifactId>
-                        <version>2.2</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>load-db-config-from-yaml</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>execute</goal>
-                        </goals>
-                        <configuration>
-                            <scripts>
-                                <script><![CDATA[
-import org.yaml.snakeyaml.Yaml
-import java.nio.file.*
-
-def cfgPath = Paths.get(project.basedir.toString(), "plugins", "joupen", "config.yml")
-def yaml = new Yaml()
-def map = [:]
-def db = [:]
-
-if (Files.exists(cfgPath)) {
-    map = yaml.load(Files.newInputStream(cfgPath)) ?: [:]
-    db = (map["database"] instanceof Map) ? map["database"] : [:]
-} else {
-    println "[WARNING] YAML config not found at ${cfgPath}, using default properties"
-}
-
-// Helper: effective = CLI (-Ddatabase.*) -> YAML -> defaults (from <properties>)
-def eff = [:]
-["url", "user", "password", "driver", "schema"].each { k ->
-    def cli = project.properties.getProperty("database.${k}")
-    def yml = (db[k] != null ? db[k].toString().trim() : null)
-    def dflt = project.properties.getProperty("database.${k}")
-    def val = (cli && cli.trim()) ? cli.trim() : (yml && yml.trim() ? yml : dflt)
-    if (val != null && val.toString().trim()) {
-        project.properties.setProperty("database.${k}", val.toString().trim())
-        eff[k] = val.toString().trim()
-    }
-}
-
-println "[db-props] url=" + (eff.url ?: "<unset>")
-println "[db-props] schema=" + (eff.schema ?: "<unset>")
-println "[db-props] user=" + (eff.user ?: "<unset>")
-println "[db-props] password=" + (eff.password ?: "<unset>")
-println "[db-props] driver=" + (eff.driver ?: "<unset>")
-]]></script>
-
-                                <!-- Generate jOOQ config -->
-                                <script><![CDATA[
-import java.nio.file.*
-
-String xmlEscape(String s) {
-    if (s == null) return ""
-    s.replace("&", "&amp;")
-     .replace("<", "&lt;")
-     .replace(">", "&gt;")
-     .replace("\"", "&quot;")
-}
-
-def outDir = Paths.get(project.build.directory)
-Files.createDirectories(outDir)
-def jooqCfg = outDir.resolve("jooq-config.xml")
-
-def schema = project.properties.getProperty("database.schema", "Joupen") ?: ""
-
-def xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<configuration>
-  <generator>
-    <database>
-      <name>org.jooq.meta.extensions.liquibase.LiquibaseDatabase</name>
-      <properties>
-        <property>
-          <key>rootPath</key>
-          <value>${xmlEscape(project.basedir.toString())}/src/main/resources/db/changelog</value>
-        </property>
-        <property>
-          <key>scripts</key>
-          <value>db.changelog-master.yaml</value>
-        </property>
-        <property>
-          <key>includeLiquibaseTables</key>
-          <value>false</value>
-        </property>
-        <property>
-          <key>database.liquibaseSchemaName</key>
-          <value>${xmlEscape(schema)}</value>
-        </property>
-        <property>
-          <key>changeLogParameters.contexts</key>
-          <value>!test</value>
-        </property>
-        <!-- Добавленные свойства для регистра -->
-        <property>
-          <key>renderNameStyle</key>
-          <value>LOWER</value>
-        </property>
-        <property>
-          <key>renderFormatted</key>
-          <value>false</value>
-        </property>
-      </properties>
-      <includes>.*</includes>
-      <forcedTypes>
-        <forcedType>
-          <priority>0</priority>
-          <userType>java.lang.Boolean</userType>
-          <binding>org.jooq.impl.BooleanToByteBinding</binding>
-          <includeExpression>PAID</includeExpression>
-          <includeTypes>TINYINT</includeTypes>
-          <nullability>ALL</nullability>
-          <objectType>ALL</objectType>
-        </forcedType>
-      </forcedTypes>
-      <!-- Добавленная стратегия именования -->
-      <strategy>
-        <matchers>
-          <tables>
-            <table>
-              <expression>.*</expression>
-              <tableIdentifier>
-                <case>LOWER</case>
-              </tableIdentifier>
-            </table>
-          </tables>
-          <fields>
-            <field>
-              <expression>.*</expression>
-              <fieldIdentifier>
-                <case>LOWER</case>
-              </fieldIdentifier>
-            </field>
-          </fields>
-        </matchers>
-      </strategy>
-    </database>
-    <target>
-      <packageName>org.joupen.jooq.generated</packageName>
-      <directory>${xmlEscape(project.build.directory.toString())}/generated-sources/jooq</directory>
-    </target>
-    <generate>
-      <javaTimeTypes>true</javaTimeTypes>
-      <records>true</records>
-      <pojos>true</pojos>
-      <fluentSetters>true</fluentSetters>
-      <defaultSchema>false</defaultSchema>
-    </generate>
-  </generator>
-</configuration>
-"""
-
-Files.writeString(jooqCfg, xml)
-project.properties.setProperty("jooq.config.file", jooqCfg.toString())
-println "[jooq-config] written: " + jooqCfg
-]]></script>
-
-                                <!-- Generate liquibase.properties -->
-                                <script><![CDATA[
-import java.nio.file.*
-
-def outDir = Paths.get(project.build.directory)
-Files.createDirectories(outDir)
-def lbProps = outDir.resolve("liquibase.properties")
-
-def url = project.properties.getProperty("database.url") ?: ""
-def user = project.properties.getProperty("database.user") ?: ""
-def pass = project.properties.getProperty("database.password") ?: ""
-def driver = project.properties.getProperty("database.driver", "org.mariadb.jdbc.Driver") ?: ""
-
-def content = new StringBuilder()
-content << "liquibase.url=${url}\n"
-content << "liquibase.username=${user}\n"
-content << "liquibase.password=${pass}\n"
-content << "liquibase.driver=${driver}\n"
-content << "liquibase.changeLogFile=src/main/resources/db/changelog/db.changelog-master.yaml\n"
-
-Files.writeString(lbProps, content.toString())
-project.properties.setProperty("liquibase.properties.file", lbProps.toString())
-println "[liquibase-properties] written: " + lbProps
-println "[liquibase-properties] content:\n" + content.toString()
-]]></script>
-                            </scripts>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -575,7 +374,60 @@ println "[liquibase-properties] content:\n" + content.toString()
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <configurationFile>${jooq.config.file}</configurationFile>
+                            <generator>
+                                <database>
+                                    <name>org.jooq.meta.extensions.liquibase.LiquibaseDatabase</name>
+                                    <properties>
+                                        <property>
+                                            <key>rootPath</key>
+                                            <value>${project.basedir}/src/main/resources/db/changelog</value>
+                                        </property>
+                                        <property>
+                                            <key>scripts</key>
+                                            <value>db.changelog-master.yaml</value>
+                                        </property>
+                                        <property>
+                                            <key>includeLiquibaseTables</key>
+                                            <value>false</value>
+                                        </property>
+                                        <property>
+                                            <key>changeLogParameters.contexts</key>
+                                            <value>!test</value>
+                                        </property>
+                                        <property>
+                                            <key>renderNameStyle</key>
+                                            <value>LOWER</value>
+                                        </property>
+                                        <property>
+                                            <key>renderFormatted</key>
+                                            <value>false</value>
+                                        </property>
+                                    </properties>
+                                    <includes>.*</includes>
+                                    <forcedTypes>
+                                        <forcedType>
+                                            <priority>0</priority>
+                                            <userType>java.lang.Boolean</userType>
+                                            <binding>org.jooq.impl.BooleanToByteBinding</binding>
+                                            <includeExpression>PAID</includeExpression>
+                                            <includeTypes>TINYINT</includeTypes>
+                                            <nullability>ALL</nullability>
+                                            <objectType>ALL</objectType>
+                                        </forcedType>
+                                    </forcedTypes>
+                                </database>
+                                <generate>
+                                    <javaTimeTypes>true</javaTimeTypes>
+                                    <records>true</records>
+                                    <pojos>true</pojos>
+                                    <fluentSetters>true</fluentSetters>
+                                    <defaultSchema>true</defaultSchema>
+                                </generate>
+                                <target>
+                                    <packageName>org.joupen.jooq.generated</packageName>
+                                    <directory>${project.build.directory}/generated-sources/jooq</directory>
+                                </target>
+                            </generator>
                         </configuration>
                     </execution>
                 </executions>
@@ -611,7 +463,7 @@ println "[liquibase-properties] content:\n" + content.toString()
                         </goals>
                         <configuration>
                             <sources>
-                                <source>target/generated-sources/jooq</source>
+                                <source>${project.build.directory}/generated-sources/jooq</source>
                             </sources>
                         </configuration>
                     </execution>
