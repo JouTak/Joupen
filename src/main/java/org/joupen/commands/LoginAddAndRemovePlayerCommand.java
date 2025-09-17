@@ -95,7 +95,10 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .append(Component.text("/joupen info {for OP: player}", NamedTextColor.GREEN))
                 .append(Component.text(" - показывает информацию о вашей проходке. Админ может смотреть всех игроков", NamedTextColor.BLUE))
                 .appendNewline()
-                .append(Component.text("Developed by ", NamedTextColor.GRAY))
+                .append(Component.text("/joupen addAllToWhitelist <Path to file> <amount of days>",NamedTextColor.GREEN))
+                .append(Component.text(" - добавляет игроков из файла в вайтлист на указнное кол-во дней", NamedTextColor.BLUE))
+                .appendNewline()
+                 .append(Component.text("Developed by ", NamedTextColor.GRAY))
                 .append(Component.text("Lapitaniy ", NamedTextColor.DARK_AQUA))
                 .append(Component.text("The ", NamedTextColor.RED))
                 .append(Component.text("Гр", NamedTextColor.WHITE))
@@ -329,6 +332,10 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
     }
 
     private void addCommand(CommandSender sender, String[] args) {
+        if (checkPermission(sender, "joupen.admin")) {
+            return;
+        }
+
         if (args.length < 3) {
             sender.sendMessage(Component.text("Usage: /joupen addAll <filePath> <days>", NamedTextColor.RED));
             return;
