@@ -279,7 +279,12 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             if (isNew) {
                 try {
                     playerRepository.save(playerDto);
-                    Bukkit.broadcast(Component.text("Новый игрок " + args[1] + " впервые оплатил проходку! Ура!", NamedTextColor.AQUA));
+                    TextComponent textComponent = Component.text()
+                            .append(Component.text("Новый игрок ", NamedTextColor.AQUA))
+                            .append(Component.text(args[1], NamedTextColor.YELLOW))
+                            .append(Component.text(" впервые оплатил проходку! Ура!", NamedTextColor.AQUA))
+                            .build();
+                    Bukkit.getServer().sendMessage(textComponent);
                     commandSender.sendMessage(Component.text("Added new player to the whitelist: " + args[1], NamedTextColor.RED));
                     log.info("Saved new player to whitelist: {}", args[1]);
                 } catch (Exception e) {
@@ -288,9 +293,14 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             } else {
                 try {
                     playerRepository.updateByName(playerDto,playerDto.getName());
-                    Bukkit.broadcast(Component.text("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!", NamedTextColor.AQUA));
-                    Bukkit.broadcastMessage("Игрок " + args[1] + " продлил проходку на еще " + formatDuration(duration) + ". Ура!");
-
+                    TextComponent textComponent = Component.text()
+                            .append(Component.text("Игрок ", NamedTextColor.AQUA))
+                            .append(Component.text(args[1], NamedTextColor.YELLOW))
+                            .append(Component.text(" продлил проходку на еще ", NamedTextColor.AQUA))
+                            .append(Component.text(formatDuration(duration), NamedTextColor.AQUA))
+                            .append(Component.text(". Ура!", NamedTextColor.AQUA))
+                            .build();
+                    Bukkit.getServer().sendMessage(textComponent);
                     commandSender.sendMessage(Component.text("Added player to the whitelist: " + args[1], NamedTextColor.RED));
                     log.info("Player has renewed his subscription: {}", args[1]);
                 } catch (Exception e) {
