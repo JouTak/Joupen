@@ -15,6 +15,9 @@ import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -54,6 +57,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             case "prolong" -> prolongCommand(commandSender, args, false);
             case "gift" -> prolongCommand(commandSender, args, true);
             case "link" -> linkCommand(commandSender);
+            case "addAllToWhitelist" -> addCommand(commandSender, args);
             default -> {
                 commandSender.sendMessage(Component.text("Unknown subcommand. Try /joupen help", NamedTextColor.RED));
                 log.warn("Unknown subcommand: {}", args[0]);
@@ -323,4 +327,68 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         commandSender.sendMessage(textComponent);
         log.info("Displayed payment link to {}", commandSender.getName());
     }
+
+    private void addCommand(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(Component.text("Usage: /joupen addAll <filePath> <days>", NamedTextColor.RED));
+            return;
+        }
+
+        String filePath = args[1];
+        int days;
+        try {
+            days = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(Component.text("Некорректное значение дней: " + args[2], NamedTextColor.RED));
+            return;
+        }
+
+        Path path = Path.of(filePath);
+        if (!path.isAbsolute()) {
+            path = Path.of("plugins", "joupen").resolve(filePath);
+        }
+
+        if (!Files.exists(path)) {
+            sender.sendMessage(Component.text("Файл не найден: " + path, NamedTextColor.RED));
+            return;
+        }
+
+        try {
+            List<String> names = Files.readAllLines(path);
+            LocalDateTime now = LocalDateTime.now();
+            Duration duration = Duration.ofDays(days);
+
+            int imported = 0;
+            for (String name : names) {
+                if (name.isBlank()) continue;
+
+                Optional<PlayerEntity> optionalEntity = playerRepository.findByName(name.trim());
+                if (optionalEntity.isPresent()) {
+                    log.info("Player {} already in DB, skip", name);
+                    continue;
+                }
+
+                PlayerDto playerDto = PlayerDto.builder()
+                        .name(name.trim())
+                        .paid(true)
+                        .lastProlongDate(now)
+                        .validUntil(now.plus(duration))
+                        .uuid(INITIAL_UUID.getUuid())
+                        .build();
+
+                playerRepository.save(playerDto);
+                imported++;
+                log.info("Added new player: {} for {} day(days)", name, days);
+            }
+
+            sender.sendMessage(Component.text("Импортировано " + imported + " игроков из файла " + path, NamedTextColor.GREEN));
+        } catch (IOException e) {
+            sender.sendMessage(Component.text("Ошибка при чтении файла: " + e.getMessage(), NamedTextColor.RED));
+            log.error("Ошибка чтения файла {}: {}", filePath, e.getMessage());
+        } catch (Exception e) {
+            sender.sendMessage(Component.text("Неожиданная ошибка: " + e.getMessage(), NamedTextColor.RED));
+            log.error("Неожиданная ошибка: {}", e.getMessage());
+        }
+    }
+
 }
