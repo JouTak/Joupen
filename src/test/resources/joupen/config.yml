@@ -1,0 +1,13 @@
+plugin:
+  enabled: true
+  playersFile: player.json
+  useSql: true
+  migrate: false
+database:
+  url: jdbc:mariadb://mariadb:3306/mydb
+  user: testuser
+  password: testpass
+  driver: org.mariadb.jdbc.Driver
+  dialect: org.hibernate.dialect.MariaDBDialect
+  showSql: true
+  formatSql: true

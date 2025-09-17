@@ -1,6 +1,6 @@
-name: LoginPluginForJoutak
+name: joupen
 version: '${project.version}'
-main: org.joutak.loginpluginforjoutak.LoginPluginForJoutak
+main: org.joupen.JoupenPlugin
 api-version: '1.20'
 commands:
   joupen: {}

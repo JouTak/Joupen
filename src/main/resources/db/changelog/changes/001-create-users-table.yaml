@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001
+      author:   joutak
+      changes:
+        - createTable:
+            tableName: players
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: name
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: uuid
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_prolong_date
+                  type: DATETIME
+                  constraints:
+                    nullable: true
+              - column:
+                  name: valid_until
+                  type: DATETIME
+                  constraints:
+                    nullable: true
+              - column:
+                  name: paid
+                  type: BOOLEAN
