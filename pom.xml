@@ -18,11 +18,8 @@
         <hikari.version>5.1.0</hikari.version>
         <mariadb.version>3.4.1</mariadb.version>
         <mapstruct.version>1.6.0</mapstruct.version>
-        <database.url>jdbc:mariadb://mariadb:3306/Joupen</database.url>
-        <database.user>user</database.user>
-        <database.password>user_password</database.password>
+        <liquibase.version>4.27.0</liquibase.version>
         <database.schema>Joupen</database.schema>
-        <database.driver>org.mariadb.jdbc.Driver</database.driver>
     </properties>
 
     <dependencies>
@@ -33,6 +30,7 @@
             <version>1.20.2-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -40,6 +38,7 @@
             <version>1.18.34</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- MapStruct -->
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -58,6 +57,7 @@
             <version>0.2.0</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- jOOQ -->
         <dependency>
             <groupId>org.jooq</groupId>
@@ -70,25 +70,35 @@
             <version>${jooq.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq-meta-extensions-liquibase</artifactId>
+            <version>${jooq.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- HikariCP -->
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>${hikari.version}</version>
         </dependency>
+
         <!-- MariaDB JDBC -->
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>${mariadb.version}</version>
         </dependency>
-        <!-- Liquibase -->
+
+        <!-- Liquibase (compile-time not нужен — оставим provided) -->
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
-            <version>4.27.0</version>
+            <version>${liquibase.version}</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- Jackson -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -100,13 +110,15 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.17.2</version>
         </dependency>
+
         <!-- SnakeYAML -->
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.2</version>
         </dependency>
-        <!-- JUnit and Mockito -->
+
+        <!-- Tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -120,16 +132,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.9</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <version>2.0.9</version>
-        </dependency>
-        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>5.12.0</version>
@@ -141,14 +143,12 @@
             <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
-        <!-- MockBukkit -->
         <dependency>
             <groupId>com.github.seeseemelk</groupId>
             <artifactId>MockBukkit-v1.20</artifactId>
             <version>3.33.0</version>
             <scope>test</scope>
         </dependency>
-        <!-- Minecraft RCON Client -->
         <dependency>
             <groupId>com.github.t9t.minecraft-rcon-client</groupId>
             <artifactId>minecraft-rcon-client</artifactId>
@@ -161,7 +161,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!-- Testcontainers -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
@@ -180,10 +179,23 @@
             <version>1.20.1</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>2.0.9</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -210,6 +222,8 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- Surefire (Tests) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -223,6 +237,8 @@
                     <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
             </plugin>
+
+            <!-- Shade -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -244,8 +260,7 @@
                                 </filter>
                             </filters>
                             <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>org.joupen.JoupenPlugin</Main-Class>
                                     </manifestEntries>
@@ -255,11 +270,31 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Resources -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
                 <executions>
+                    <execution>
+                        <id>copy-changelog-files</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/classes/db/changelog</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources/db/changelog</directory>
+                                    <includes>
+                                        <include>**/*</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>copy-config-yml</id>
                         <phase>process-test-resources</phase>
@@ -302,26 +337,8 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.liquibase</groupId>
-                <artifactId>liquibase-maven-plugin</artifactId>
-                <version>4.27.0</version>
-                <configuration>
-                    <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
-                    <driver>${database.driver}</driver>
-                    <url>${database.url}</url>
-                    <username>${database.user}</username>
-                    <password>${database.password}</password>
-                    <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.mariadb.jdbc</groupId>
-                        <artifactId>mariadb-java-client</artifactId>
-                        <version>${mariadb.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
+
+            <!-- jOOQ Codegen (из Liquibase changelog'ов в H2) -->
             <plugin>
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq-codegen-maven</artifactId>
@@ -333,42 +350,84 @@
                         <goals>
                             <goal>generate</goal>
                         </goals>
+                        <configuration>
+                            <generator>
+                                <database>
+                                    <name>org.jooq.meta.extensions.liquibase.LiquibaseDatabase</name>
+                                    <properties>
+                                        <property>
+                                            <key>rootPath</key>
+                                            <value>${project.basedir}/src/main/resources/db/changelog</value>
+                                        </property>
+                                        <property>
+                                            <key>scripts</key>
+                                            <value>master.yaml</value>
+                                        </property>
+                                        <property>
+                                            <key>includeLiquibaseTables</key>
+                                            <value>false</value>
+                                        </property>
+                                        <property>
+                                            <key>changeLogParameters.contexts</key>
+                                            <value>!test</value>
+                                        </property>
+                                        <property>
+                                            <key>renderNameStyle</key>
+                                            <value>LOWER</value>
+                                        </property>
+                                        <property>
+                                            <key>renderFormatted</key>
+                                            <value>false</value>
+                                        </property>
+                                    </properties>
+                                    <includes>.*</includes>
+                                    <forcedTypes>
+                                        <forcedType>
+                                            <priority>0</priority>
+                                            <userType>java.lang.Boolean</userType>
+                                            <binding>org.jooq.impl.BooleanToByteBinding</binding>
+                                            <includeExpression>PAID</includeExpression>
+                                            <includeTypes>TINYINT</includeTypes>
+                                            <nullability>ALL</nullability>
+                                            <objectType>ALL</objectType>
+                                        </forcedType>
+                                    </forcedTypes>
+                                </database>
+                                <generate>
+                                    <javaTimeTypes>true</javaTimeTypes>
+                                    <records>true</records>
+                                    <pojos>true</pojos>
+                                    <fluentSetters>true</fluentSetters>
+                                    <defaultSchema>true</defaultSchema>
+                                </generate>
+                                <target>
+                                    <packageName>org.joupen.jooq.generated</packageName>
+                                    <directory>${project.build.directory}/generated-sources/jooq</directory>
+                                </target>
+                            </generator>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <jdbc>
-                        <driver>${database.driver}</driver>
-                        <url>${database.url}</url>
-                        <user>${database.user}</user>
-                        <password>${database.password}</password>
-                    </jdbc>
-                    <generator>
-                        <database>
-                            <name>org.jooq.meta.mariadb.MariaDBDatabase</name>
-                            <inputSchema>${database.schema}</inputSchema>
-                            <includes>.*</includes>
-                            <forcedTypes>
-                                <forcedType>
-                                    <userType>java.lang.Boolean</userType>
-                                    <binding>org.jooq.impl.BooleanToByteBinding</binding>
-                                    <expression>PAID</expression>
-                                    <types>TINYINT</types>
-                                </forcedType>
-                            </forcedTypes>
-                        </database>
-                        <target>
-                            <packageName>org.joupen.jooq.generated</packageName>
-                            <directory>target/generated-sources/jooq</directory>
-                        </target>
-                        <generate>
-                            <javaTimeTypes>true</javaTimeTypes>
-                            <records>true</records>
-                            <pojos>true</pojos>
-                            <fluentSetters>true</fluentSetters>
-                        </generate>
-                    </generator>
-                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jooq</groupId>
+                        <artifactId>jooq-meta-extensions-liquibase</artifactId>
+                        <version>${jooq.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.liquibase</groupId>
+                        <artifactId>liquibase-core</artifactId>
+                        <version>${liquibase.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.mariadb.jdbc</groupId>
+                        <artifactId>mariadb-java-client</artifactId>
+                        <version>${mariadb.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
+
+            <!-- Add generated sources -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -381,13 +440,14 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>target/generated-sources/jooq</source>
+                                <source>${project.build.directory}/generated-sources/jooq</source>
                             </sources>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -410,7 +470,7 @@
                     <plugin>
                         <groupId>org.liquibase</groupId>
                         <artifactId>liquibase-maven-plugin</artifactId>
-                        <version>4.27.0</version>
+                        <version>${liquibase.version}</version>
                         <executions>
                             <execution>
                                 <phase>process-resources</phase>
@@ -420,12 +480,13 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
-                            <driver>${database.driver}</driver>
-                            <url>${database.url}</url>
-                            <username>${database.user}</username>
-                            <password>${database.password}</password>
                             <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
+                            <url>jdbc:mariadb://localhost:3306/Joupen1</url>
+                            <username>user</username>
+                            <password>user_password</password>
+                            <driver>org.mariadb.jdbc.Driver</driver>
+                            <searchPath>${project.basedir}/src/main/resources</searchPath>
+                            <changeLogFile>db/changelog/master.yaml</changeLogFile>
                         </configuration>
                         <dependencies>
                             <dependency>

@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   mariadb:
@@ -6,7 +6,7 @@ services:
     container_name: mariadb
     environment:
       MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: mydb
+      MYSQL_DATABASE: Joupen
       MYSQL_USER: user
       MYSQL_PASSWORD: user_password
     ports:

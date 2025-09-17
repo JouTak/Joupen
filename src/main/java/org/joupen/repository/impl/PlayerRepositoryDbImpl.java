@@ -50,12 +50,12 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .set(Players.PLAYERS.PAID, entity.getPaid())
                     .onDuplicateKeyUpdate()
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .set(Players.PLAYERS.PAID, entity.getPaid())
                     .execute();
         });
     }
@@ -77,7 +77,7 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .set(Players.PLAYERS.PAID, entity.getPaid())
                     .where(Players.PLAYERS.NAME.eq(name))
                     .execute();
             if (rowsAffected == 0) {
@@ -87,8 +87,9 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
             }
         });
     }
+
     @Override
-    public void updateByUuid(PlayerDto playerDto,UUID uuid) {
+    public void updateByUuid(PlayerDto playerDto, UUID uuid) {
         transactionManager.executeInTransaction(txDsl -> {
             PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             int rowsAffected = txDsl.update(Players.PLAYERS)
@@ -96,7 +97,7 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
-                    .set(Players.PLAYERS.PAID, entity.getPaid() ? (byte) 1 : (byte) 0)
+                    .set(Players.PLAYERS.PAID, entity.getPaid())
                     .where(Players.PLAYERS.UUID.eq(uuid.toString()))
                     .execute();
             if (rowsAffected == 0) {
@@ -106,6 +107,7 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
             }
         });
     }
+
     @Override
     public void delete(UUID uuid) {
         transactionManager.executeInTransaction(txDsl ->

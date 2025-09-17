@@ -5,6 +5,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
+import org.jooq.conf.RenderNameCase;
+import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
 import org.joupen.utils.JoupenProperties;
 
@@ -21,7 +23,8 @@ public class DatabaseManager {
         config.setDriverClassName((String) JoupenProperties.dbConfig.get("driver"));
         config.setMaximumPoolSize(10);
         this.dataSource = new HikariDataSource(config);
-        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB);
+        var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
+        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB,settings);
         log.info("DatabaseManager initialized with jOOQ for MariaDB");
     }
 

@@ -18,6 +18,7 @@ public class TransactionManager {
     }
 
     public void executeInTransaction(Consumer<DSLContext> operation) {
+
         DSLContext dsl = databaseManager.getDslContext();
         try {
             dsl.transaction(configuration -> {
