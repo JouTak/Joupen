@@ -70,7 +70,7 @@ public abstract class BasePluginIntegrationTest {
         Database database = DatabaseFactory.getInstance()
                 .findCorrectDatabaseImplementation(new JdbcConnection(mariaDB.createConnection("")));
         Liquibase liquibase = new Liquibase(
-                "db/changelog/db.changelog-master.yaml",
+                "db/changelog/master.yaml",
                 resourceAccessor,
                 database
         );

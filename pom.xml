@@ -91,7 +91,7 @@
             <version>${mariadb.version}</version>
         </dependency>
 
-        <!-- Liquibase -->
+        <!-- Liquibase (compile-time not нужен — оставим provided) -->
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
@@ -118,7 +118,7 @@
             <version>2.2</version>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- Tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -179,6 +179,8 @@
             <version>1.20.1</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -258,8 +260,7 @@
                                 </filter>
                             </filters>
                             <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>org.joupen.JoupenPlugin</Main-Class>
                                     </manifestEntries>
@@ -337,31 +338,7 @@
                 </executions>
             </plugin>
 
-            <!-- Liquibase -->
-            <plugin>
-                <groupId>org.liquibase</groupId>
-                <artifactId>liquibase-maven-plugin</artifactId>
-                <version>${liquibase.version}</version>
-                <configuration>
-                    <propertyFile>${liquibase.properties.file}</propertyFile>
-                    <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
-                    <url>${database.url}</url>
-                    <username>${database.user}</username>
-                    <password>${database.password}</password>
-                    <driver>${database.driver}</driver>
-                    <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
-                    <searchPath>${project.basedir}/src/main/resources/db/changelog</searchPath>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.mariadb.jdbc</groupId>
-                        <artifactId>mariadb-java-client</artifactId>
-                        <version>${mariadb.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-
-            <!-- jOOQ Codegen -->
+            <!-- jOOQ Codegen (из Liquibase changelog'ов в H2) -->
             <plugin>
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq-codegen-maven</artifactId>
@@ -384,7 +361,7 @@
                                         </property>
                                         <property>
                                             <key>scripts</key>
-                                            <value>db.changelog-master.yaml</value>
+                                            <value>master.yaml</value>
                                         </property>
                                         <property>
                                             <key>includeLiquibaseTables</key>
@@ -503,14 +480,13 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <propertyFile>${liquibase.properties.file}</propertyFile>
                             <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
-                            <url>${database.url}</url>
-                            <username>${database.user}</username>
-                            <password>${database.password}</password>
-                            <driver>${database.driver}</driver>
-                            <changeLogFile>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogFile>
-                            <searchPath>${project.basedir}/src/main/resources/db/changelog</searchPath>
+                            <url>jdbc:mariadb://localhost:3306/Joupen1</url>
+                            <username>user</username>
+                            <password>user_password</password>
+                            <driver>org.mariadb.jdbc.Driver</driver>
+                            <searchPath>${project.basedir}/src/main/resources</searchPath>
+                            <changeLogFile>db/changelog/master.yaml</changeLogFile>
                         </configuration>
                         <dependencies>
                             <dependency>

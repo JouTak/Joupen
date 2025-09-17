@@ -94,7 +94,7 @@ public abstract class BasePurpurIntegrationTest extends BaseMariaDBContainer {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(mariaDB.createConnection("")));
             Liquibase liquibase = new Liquibase(
-                    "db/changelog/db.changelog-master.yaml",
+                    "db/changelog/master.yaml",
                     new ClassLoaderResourceAccessor(),
                     database
             );
