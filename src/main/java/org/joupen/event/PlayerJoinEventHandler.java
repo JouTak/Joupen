@@ -15,10 +15,12 @@ import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.joupen.enums.UUIDTypes.INITIAL_UUID;
 
@@ -39,7 +41,9 @@ public class PlayerJoinEventHandler implements Listener {
     public void playerJoinEvent(PlayerLoginEvent playerLoginEvent) {
         Player player = playerLoginEvent.getPlayer();
 
-        // Поиск игрока в репозитории
+        checkGiftFile(player);
+
+        // Ищем игрока в репозитории
         Optional<PlayerEntity> optionalEntity = playerRepository.findByUuid(player.getUniqueId());
         if (optionalEntity.isEmpty()) {
             optionalEntity = playerRepository.findByName(player.getName());
@@ -78,9 +82,9 @@ public class PlayerJoinEventHandler implements Listener {
             playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
 
             try {
-                playerRepository.updateByName(playerDto,playerLoginEvent.getPlayer().getName());
+                playerRepository.updateByName(playerDto, playerLoginEvent.getPlayer().getName());
 
-                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}", playerDto.getName(),playerLoginEvent.getPlayer().getUniqueId());
+                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}", playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
             } catch (Exception e) {
                 log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
                 throw new RuntimeException("Failed to update player data", e);
@@ -88,5 +92,88 @@ public class PlayerJoinEventHandler implements Listener {
         }
 
         playerLoginEvent.allow();
+    }
+
+    /**
+     * Проверка gifts.txt. Если игрок найден — создаётся/обновляется запись в базе и начисляется проходка.
+     */
+    private void checkGiftFile(Player player) {
+        Path giftsFile = Paths.get("plugins/joupen/gifts.txt");
+        if (!Files.exists(giftsFile)) {
+            return;
+        }
+
+        try {
+            List<String> lines = Files.readAllLines(giftsFile, StandardCharsets.UTF_8);
+            List<String> updatedLines = new ArrayList<>();
+            boolean rewarded = false;
+
+            for (String line : lines) {
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length != 2) {
+                    updatedLines.add(line); // некорректная строка, оставляем
+                    continue;
+                }
+
+                String nick = parts[0];
+                String reward = parts[1];
+
+                if (nick.equalsIgnoreCase(player.getName())) {
+                    LocalDateTime newValidUntil = applyReward(LocalDateTime.now(), reward);
+
+                    // Проверяем — есть ли игрок в базе
+                    Optional<PlayerEntity> optionalEntity = playerRepository.findByName(nick);
+
+                    if (optionalEntity.isPresent()) {
+                        PlayerDto dto = playerMapper.entityToDto(optionalEntity.get());
+                        dto.setValidUntil(newValidUntil);
+                        dto.setLastProlongDate(LocalDateTime.now());
+                        dto.setUuid(player.getUniqueId());
+                        playerRepository.updateByName(dto, nick);
+                    } else {
+                        PlayerDto dto = new PlayerDto();
+                        dto.setName(nick);
+                        dto.setUuid(player.getUniqueId());
+                        dto.setValidUntil(newValidUntil);
+                        dto.setLastProlongDate(LocalDateTime.now());
+                        playerRepository.save(dto);
+                    }
+
+                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: " + reward, NamedTextColor.GOLD));
+                    log.info("Игрок {} получил награду {}", nick, reward);
+
+                    rewarded = true;
+                } else {
+                    updatedLines.add(line);
+                }
+            }
+
+            if (rewarded) {
+                Files.write(giftsFile, updatedLines, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+            }
+        } catch (IOException e) {
+            log.error("Ошибка чтения gifts.txt: {}", e.getMessage());
+        }
+    }
+
+    private LocalDateTime applyReward(LocalDateTime base, String reward) {
+        try {
+            if (reward.endsWith("d")) {
+                int days = Integer.parseInt(reward.substring(0, reward.length() - 1));
+                return base.plusDays(days);
+            } else if (reward.endsWith("mo")) {
+                int months = Integer.parseInt(reward.substring(0, reward.length() - 2));
+                return base.plusMonths(months);
+            } else if (reward.endsWith("s")) {
+                int seconds = Integer.parseInt(reward.substring(0, reward.length() - 1));
+                return base.plusSeconds(seconds);
+            } else {
+                log.warn("Неизвестный формат награды: {}", reward);
+                return base;
+            }
+        } catch (Exception e) {
+            log.error("Ошибка при разборе награды {}: {}", reward, e.getMessage());
+            return base;
+        }
     }
 }
