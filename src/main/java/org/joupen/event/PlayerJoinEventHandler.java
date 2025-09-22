@@ -13,11 +13,13 @@ import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.utils.TimeUtils;
 import org.mapstruct.factory.Mappers;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -103,12 +105,12 @@ public class PlayerJoinEventHandler implements Listener {
             return;
         }
 
-        try {
-            List<String> lines = Files.readAllLines(giftsFile, StandardCharsets.UTF_8);
-            List<String> updatedLines = new ArrayList<>();
-            boolean rewarded = false;
+        List<String> updatedLines = new ArrayList<>();
+        boolean rewarded = false;
 
-            for (String line : lines) {
+        try (BufferedReader reader = Files.newBufferedReader(giftsFile, StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
                 String[] parts = line.trim().split("\\s+");
                 if (parts.length != 2) {
                     updatedLines.add(line); // некорректная строка, оставляем
@@ -119,7 +121,8 @@ public class PlayerJoinEventHandler implements Listener {
                 String reward = parts[1];
 
                 if (nick.equalsIgnoreCase(player.getName())) {
-                    LocalDateTime newValidUntil = applyReward(LocalDateTime.now(), reward);
+                    Duration duration = TimeUtils.parseDuration(reward);
+                    LocalDateTime newValidUntil = LocalDateTime.now().plus(duration);
 
                     // Проверяем — есть ли игрок в базе
                     Optional<PlayerEntity> optionalEntity = playerRepository.findByName(nick);
@@ -139,7 +142,7 @@ public class PlayerJoinEventHandler implements Listener {
                         playerRepository.save(dto);
                     }
 
-                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: " + reward, NamedTextColor.GOLD));
+                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: " + TimeUtils.formatDuration(duration), NamedTextColor.GOLD));
                     log.info("Игрок {} получил награду {}", nick, reward);
 
                     rewarded = true;
@@ -147,33 +150,16 @@ public class PlayerJoinEventHandler implements Listener {
                     updatedLines.add(line);
                 }
             }
-
-            if (rewarded) {
-                Files.write(giftsFile, updatedLines, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
-            }
         } catch (IOException e) {
             log.error("Ошибка чтения gifts.txt: {}", e.getMessage());
         }
-    }
 
-    private LocalDateTime applyReward(LocalDateTime base, String reward) {
-        try {
-            if (reward.endsWith("d")) {
-                int days = Integer.parseInt(reward.substring(0, reward.length() - 1));
-                return base.plusDays(days);
-            } else if (reward.endsWith("mo")) {
-                int months = Integer.parseInt(reward.substring(0, reward.length() - 2));
-                return base.plusMonths(months);
-            } else if (reward.endsWith("s")) {
-                int seconds = Integer.parseInt(reward.substring(0, reward.length() - 1));
-                return base.plusSeconds(seconds);
-            } else {
-                log.warn("Неизвестный формат награды: {}", reward);
-                return base;
+        if (rewarded) {
+            try {
+                Files.write(giftsFile, updatedLines, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+            } catch (IOException e) {
+                log.error("Ошибка записи gifts.txt: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("Ошибка при разборе награды {}: {}", reward, e.getMessage());
-            return base;
         }
     }
 }
