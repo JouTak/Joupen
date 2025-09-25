@@ -43,7 +43,10 @@ public class PlayerJoinEventHandler implements Listener {
     public void playerJoinEvent(PlayerLoginEvent playerLoginEvent) {
         Player player = playerLoginEvent.getPlayer();
 
-        checkGiftFile(player);
+        // Проверяем подарки, если есть ошибка в формате — сразу кикаем
+        if (!checkGiftFile(player, playerLoginEvent)) {
+            return; // игрок уже кикнут
+        }
 
         // Ищем игрока в репозитории
         Optional<PlayerEntity> optionalEntity = playerRepository.findByUuid(player.getUniqueId());
@@ -77,7 +80,8 @@ public class PlayerJoinEventHandler implements Listener {
         UUID uuid = playerDto.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
             LocalDateTime now = LocalDateTime.now();
-            LocalDateTime validUntil = playerDto.getValidUntil().plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
+            LocalDateTime validUntil = playerDto.getValidUntil()
+                    .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
 
             playerDto.setValidUntil(validUntil);
             playerDto.setLastProlongDate(now);
@@ -86,7 +90,8 @@ public class PlayerJoinEventHandler implements Listener {
             try {
                 playerRepository.updateByName(playerDto, playerLoginEvent.getPlayer().getName());
 
-                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}", playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
+                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}",
+                        playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
             } catch (Exception e) {
                 log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
                 throw new RuntimeException("Failed to update player data", e);
@@ -98,11 +103,14 @@ public class PlayerJoinEventHandler implements Listener {
 
     /**
      * Проверка gifts.txt. Если игрок найден — создаётся/обновляется запись в базе и начисляется проходка.
+     * Если формат подарка некорректный — игрок кикается.
+     *
+     * @return true если всё ок, false если игрок кикнут
      */
-    private void checkGiftFile(Player player) {
+    private boolean checkGiftFile(Player player, PlayerLoginEvent event) {
         Path giftsFile = Paths.get("plugins/joupen/gifts.txt");
         if (!Files.exists(giftsFile)) {
-            return;
+            return true;
         }
 
         List<String> updatedLines = new ArrayList<>();
@@ -121,7 +129,16 @@ public class PlayerJoinEventHandler implements Listener {
                 String reward = parts[1];
 
                 if (nick.equalsIgnoreCase(player.getName())) {
-                    Duration duration = TimeUtils.parseDuration(reward);
+                    Duration duration;
+                    try {
+                        duration = TimeUtils.parseDuration(reward);
+                    } catch (IllegalArgumentException e) {
+                        log.error("Невалидный подарок '{}' для игрока {}", reward, nick);
+                        event.disallow(PlayerLoginEvent.Result.KICK_OTHER,
+                                Component.text("Ошибка: неверный формат подарка (" + reward + "). " + "Напиши по этому поводу EnderDiss'e", NamedTextColor.RED));
+                        return false; // сразу кикаем игрока
+                    }
+
                     LocalDateTime newValidUntil = LocalDateTime.now().plus(duration);
 
                     // Проверяем — есть ли игрок в базе
@@ -142,7 +159,8 @@ public class PlayerJoinEventHandler implements Listener {
                         playerRepository.save(dto);
                     }
 
-                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: " + TimeUtils.formatDuration(duration), NamedTextColor.GOLD));
+                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: "
+                            + TimeUtils.formatDuration(duration), NamedTextColor.GOLD));
                     log.info("Игрок {} получил награду {}", nick, reward);
 
                     rewarded = true;
@@ -161,5 +179,7 @@ public class PlayerJoinEventHandler implements Listener {
                 log.error("Ошибка записи gifts.txt: {}", e.getMessage());
             }
         }
+
+        return true;
     }
 }
