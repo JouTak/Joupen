@@ -161,7 +161,7 @@ public class PlayerJoinEventHandler implements Listener {
 
                     player.sendMessage(Component.text("Ура! Тебе добавили проходку: "
                             + TimeUtils.formatDuration(duration), NamedTextColor.GOLD));
-                    log.info("Игрок {} получил награду {}", nick, reward);
+                    log.info("Player {} got a reward {}", nick, reward);
 
                     rewarded = true;
                 } else {
@@ -169,14 +169,14 @@ public class PlayerJoinEventHandler implements Listener {
                 }
             }
         } catch (IOException e) {
-            log.error("Ошибка чтения gifts.txt: {}", e.getMessage());
+            log.error("Reading error gifts.txt: {}", e.getMessage());
         }
 
         if (rewarded) {
             try {
                 Files.write(giftsFile, updatedLines, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
             } catch (IOException e) {
-                log.error("Ошибка записи gifts.txt: {}", e.getMessage());
+                log.error("Writing error gifts.txt: {}", e.getMessage());
             }
         }
 
