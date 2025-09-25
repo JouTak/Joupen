@@ -16,7 +16,8 @@ import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.TimeUtils;
 import org.mapstruct.factory.Mappers;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Duration;
@@ -77,7 +78,9 @@ public class PlayerJoinEventHandler implements Listener {
         UUID uuid = playerDto.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
             LocalDateTime now = LocalDateTime.now();
-            LocalDateTime validUntil = playerDto.getValidUntil().plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
+            LocalDateTime validUntil = playerDto.getValidUntil().plusDays(
+                    ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now)
+            );
 
             playerDto.setValidUntil(validUntil);
             playerDto.setLastProlongDate(now);
@@ -86,7 +89,8 @@ public class PlayerJoinEventHandler implements Listener {
             try {
                 playerRepository.updateByName(playerDto, playerLoginEvent.getPlayer().getName());
 
-                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}", playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
+                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}",
+                        playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
             } catch (Exception e) {
                 log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
                 throw new RuntimeException("Failed to update player data", e);
@@ -142,7 +146,10 @@ public class PlayerJoinEventHandler implements Listener {
                         playerRepository.save(dto);
                     }
 
-                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: " + TimeUtils.formatDuration(duration), NamedTextColor.GOLD));
+                    player.sendMessage(Component.text(
+                            "Ура! Тебе добавили проходку: " + TimeUtils.formatDuration(duration),
+                            NamedTextColor.GOLD
+                    ));
                     log.info("Игрок {} получил награду {}", nick, reward);
 
                     rewarded = true;
