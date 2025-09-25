@@ -15,15 +15,18 @@ import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.joupen.enums.UUIDTypes.INITIAL_UUID;
+import static org.joupen.utils.TimeUtils.formatDuration;
+import static org.joupen.utils.TimeUtils.parseDuration;
 
 @Slf4j
 public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
@@ -54,6 +57,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             case "prolong" -> prolongCommand(commandSender, args, false);
             case "gift" -> prolongCommand(commandSender, args, true);
             case "link" -> linkCommand(commandSender);
+            case "addAllToWhitelist" -> addCommand(commandSender, args);
             default -> {
                 commandSender.sendMessage(Component.text("Unknown subcommand. Try /joupen help", NamedTextColor.RED));
                 log.warn("Unknown subcommand: {}", args[0]);
@@ -90,6 +94,9 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .appendNewline()
                 .append(Component.text("/joupen info {for OP: player}", NamedTextColor.GREEN))
                 .append(Component.text(" - показывает информацию о вашей проходке. Админ может смотреть всех игроков", NamedTextColor.BLUE))
+                .appendNewline()
+                .append(Component.text("/joupen addAllToWhitelist <Path to file> <amount of days>", NamedTextColor.GREEN))
+                .append(Component.text(" - добавляет игроков из файла в вайтлист на указанное кол-во дней", NamedTextColor.BLUE))
                 .appendNewline()
                 .append(Component.text("Developed by ", NamedTextColor.GRAY))
                 .append(Component.text("Lapitaniy ", NamedTextColor.DARK_AQUA))
@@ -138,70 +145,6 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         log.info("Displayed info for player {} to {}", playerName, commandSender.getName());
     }
 
-    private Duration parseDuration(String durationStr) {
-        log.info("Parsing duration string: {}", durationStr);
-        // Изменяем регулярное выражение, чтобы mo обрабатывалось до m
-        Pattern pattern = Pattern.compile("(\\d+)(mo|[dhm])", Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(durationStr.toLowerCase());
-        int days = 0;
-        int hours = 0;
-        int minutes = 0;
-        int months = 0;
-        boolean found = false;
-
-        while (matcher.find()) {
-            found = true;
-            int value = Integer.parseInt(matcher.group(1));
-            String unit = matcher.group(2);
-            switch (unit) {
-                case "mo":
-                    months = value;
-                    log.info("Parsed months: {}", months);
-                    break;
-                case "d":
-                    days = value;
-                    log.info("Parsed days: {}", days);
-                    break;
-                case "h":
-                    hours = value;
-                    log.info("Parsed hours: {}", hours);
-                    break;
-                case "m":
-                    minutes = value;
-                    log.info("Parsed minutes: {}", minutes);
-                    break;
-            }
-        }
-
-        if (!found) {
-            log.warn("No valid duration found in string: {}", durationStr);
-            throw new IllegalArgumentException("Invalid duration format");
-        }
-
-        Duration duration = Duration.ofDays(months * 30L)
-                .plusDays(days)
-                .plusHours(hours)
-                .plusMinutes(minutes);
-        log.info("Parsed duration: {} months, {} days, {} hours, {} minutes", months, days, hours, minutes);
-        return duration;
-    }
-
-    private String formatDuration(Duration duration) {
-        long totalDays = duration.toDays();
-        long months = totalDays / 30;
-        long days = totalDays % 30;
-        long hours = duration.toHoursPart();
-        long minutes = duration.toMinutesPart();
-        StringBuilder sb = new StringBuilder();
-        if (months > 0) sb.append(months).append("mo ");
-        if (days > 0) sb.append(days).append("d ");
-        if (hours > 0) sb.append(hours).append("h ");
-        if (minutes > 0) sb.append(minutes).append("m");
-        String result = sb.toString().trim();
-        log.info("Formatted duration: {}", result);
-        return result.isEmpty() ? "0m" : result;
-    }
-
     private void prolongCommand(CommandSender commandSender, String[] args, boolean gift) {
         log.info("Executing /joupen prolong with args: {}, gift: {}", Arrays.toString(args), gift);
         if (checkPermission(commandSender, "joupen.admin")) {
@@ -242,7 +185,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 LocalDateTime validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
                 playerDto.setValidUntil(validUntil.plus(duration));
                 try {
-                    playerRepository.updateByName(playerDto,playerDto.getName());
+                    playerRepository.updateByName(playerDto, playerDto.getName());
                     log.info("Updated player {}: new validUntil = {}", playerDto.getName(), playerDto.getValidUntil());
                 } catch (Exception e) {
                     log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
@@ -292,7 +235,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 }
             } else {
                 try {
-                    playerRepository.updateByName(playerDto,playerDto.getName());
+                    playerRepository.updateByName(playerDto, playerDto.getName());
                     TextComponent textComponent = Component.text()
                             .append(Component.text("Игрок ", NamedTextColor.AQUA))
                             .append(Component.text(args[1], NamedTextColor.YELLOW))
@@ -322,5 +265,72 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .build();
         commandSender.sendMessage(textComponent);
         log.info("Displayed payment link to {}", commandSender.getName());
+    }
+
+    private void addCommand(CommandSender sender, String[] args) {
+        if (checkPermission(sender, "joupen.admin")) {
+            return;
+        }
+
+        if (args.length < 3) {
+            sender.sendMessage(Component.text("Usage: /joupen addAll <filePath> <days>", NamedTextColor.RED));
+            return;
+        }
+
+        String filePath = args[1];
+        int days;
+        try {
+            days = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(Component.text("Некорректное значение дней: " + args[2], NamedTextColor.RED));
+            return;
+        }
+
+        Path path = Path.of(filePath);
+        if (!path.isAbsolute()) {
+            path = Path.of("plugins", "joupen").resolve(filePath);
+        }
+
+        if (!Files.exists(path)) {
+            sender.sendMessage(Component.text("Файл не найден: " + path, NamedTextColor.RED));
+            return;
+        }
+
+        try {
+            List<String> names = Files.readAllLines(path);
+            LocalDateTime now = LocalDateTime.now();
+            Duration duration = Duration.ofDays(days);
+
+            int imported = 0;
+            for (String name : names) {
+                if (name.isBlank()) continue;
+
+                Optional<PlayerEntity> optionalEntity = playerRepository.findByName(name.trim());
+                if (optionalEntity.isPresent()) {
+                    log.info("Player {} already in DB, skip", name);
+                    continue;
+                }
+
+                PlayerDto playerDto = PlayerDto.builder()
+                        .name(name.trim())
+                        .paid(true)
+                        .lastProlongDate(now)
+                        .validUntil(now.plus(duration))
+                        .uuid(INITIAL_UUID.getUuid())
+                        .build();
+
+                playerRepository.save(playerDto);
+                imported++;
+                log.info("Added new player: {} for {} day(days)", name, days);
+            }
+
+            sender.sendMessage(Component.text("Импортировано " + imported + " игроков из файла " + path, NamedTextColor.GREEN));
+        } catch (IOException e) {
+            sender.sendMessage(Component.text("Ошибка при чтении файла: " + e.getMessage(), NamedTextColor.RED));
+            log.error("Ошибка чтения файла {}: {}", filePath, e.getMessage());
+        } catch (Exception e) {
+            sender.sendMessage(Component.text("Неожиданная ошибка: " + e.getMessage(), NamedTextColor.RED));
+            log.error("Неожиданная ошибка: {}", e.getMessage());
+        }
     }
 }
