@@ -95,10 +95,10 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 .append(Component.text("/joupen info {for OP: player}", NamedTextColor.GREEN))
                 .append(Component.text(" - показывает информацию о вашей проходке. Админ может смотреть всех игроков", NamedTextColor.BLUE))
                 .appendNewline()
-                .append(Component.text("/joupen addAllToWhitelist <Path to file> <amount of days>",NamedTextColor.GREEN))
-                .append(Component.text(" - добавляет игроков из файла в вайтлист на указнное кол-во дней", NamedTextColor.BLUE))
+                .append(Component.text("/joupen addAllToWhitelist <Path to file> <amount of days>", NamedTextColor.GREEN))
+                .append(Component.text(" - добавляет игроков из файла в вайтлист на указанное кол-во дней", NamedTextColor.BLUE))
                 .appendNewline()
-                 .append(Component.text("Developed by ", NamedTextColor.GRAY))
+                .append(Component.text("Developed by ", NamedTextColor.GRAY))
                 .append(Component.text("Lapitaniy ", NamedTextColor.DARK_AQUA))
                 .append(Component.text("The ", NamedTextColor.RED))
                 .append(Component.text("Гр", NamedTextColor.WHITE))
@@ -185,7 +185,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 LocalDateTime validUntil = playerDto.getValidUntil().isBefore(now) ? now : playerDto.getValidUntil();
                 playerDto.setValidUntil(validUntil.plus(duration));
                 try {
-                    playerRepository.updateByName(playerDto,playerDto.getName());
+                    playerRepository.updateByName(playerDto, playerDto.getName());
                     log.info("Updated player {}: new validUntil = {}", playerDto.getName(), playerDto.getValidUntil());
                 } catch (Exception e) {
                     log.error("Failed to update player {} in all prolongation: {}", playerDto.getName(), e.getMessage());
@@ -235,7 +235,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                 }
             } else {
                 try {
-                    playerRepository.updateByName(playerDto,playerDto.getName());
+                    playerRepository.updateByName(playerDto, playerDto.getName());
                     TextComponent textComponent = Component.text()
                             .append(Component.text("Игрок ", NamedTextColor.AQUA))
                             .append(Component.text(args[1], NamedTextColor.YELLOW))
@@ -333,5 +333,4 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
             log.error("Неожиданная ошибка: {}", e.getMessage());
         }
     }
-
 }
