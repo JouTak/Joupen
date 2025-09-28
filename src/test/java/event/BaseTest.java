@@ -15,7 +15,6 @@ public abstract class BaseTest {
     protected PlayerMock player;
 
     protected static final String TEST_NAME = "TestPlayer";
-    protected static final UUID TEST_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     protected static final String TEST_FILE_PATH = "src/test/resources/player.json";
 
     @BeforeEach

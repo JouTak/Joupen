@@ -12,13 +12,13 @@ public interface PlayerRepository {
 
     Optional<PlayerEntity> findByName(String name);
 
-    void save(PlayerDto playerDto);
+    void save(PlayerEntity playerDto);
 
     List<PlayerEntity> findAll();
 
-    void updateByUuid(PlayerDto playerDto,UUID uuid);
+    void updateByUuid(PlayerEntity playerDto, UUID uuid);
 
     void delete(UUID uuid);
 
-    public void updateByName(PlayerDto playerDto, String name);
+    public void updateByName(PlayerEntity playerDto, String name);
 }

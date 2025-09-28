@@ -37,13 +37,11 @@
         private TransactionManager transactionManager;
         @Mock
         private PlayerMapper playerMapper;
-        @Mock
-        private DSLContext dslContext;
 
         @BeforeEach
         void setUp() {
-            playerMapper = Mappers.getMapper(PlayerMapper.class); // Реальная реализация
-            playerJoinEventHandler = new PlayerJoinEventHandler(playerRepository, transactionManager);
+            playerMapper = Mappers.getMapper(PlayerMapper.class);
+            playerJoinEventHandler = new PlayerJoinEventHandler(playerRepository);
         }
 
         @Test
@@ -114,12 +112,12 @@
             playerJoinEventHandler.playerJoinEvent(event);
 
             // Захват аргументов для updateByName
-            ArgumentCaptor<PlayerDto> playerDtoCaptor = ArgumentCaptor.forClass(PlayerDto.class);
+            ArgumentCaptor<PlayerEntity> playerDtoCaptor = ArgumentCaptor.forClass(PlayerEntity.class);
             ArgumentCaptor<String> nameCaptor = ArgumentCaptor.forClass(String.class);
             verify(playerRepository).updateByName(playerDtoCaptor.capture(), nameCaptor.capture());
 
             // Проверка захваченных значений
-            PlayerDto updatedDto = playerDtoCaptor.getValue();
+            PlayerEntity updatedDto = playerDtoCaptor.getValue();
             String updatedName = nameCaptor.getValue();
 
             // Проверки

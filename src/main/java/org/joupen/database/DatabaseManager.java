@@ -2,6 +2,7 @@ package org.joupen.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
@@ -11,6 +12,7 @@ import org.jooq.impl.DSL;
 import org.joupen.utils.JoupenProperties;
 
 @Slf4j
+@Getter
 public class DatabaseManager {
     private final HikariDataSource dataSource;
     private final DSLContext dslContext;
@@ -26,10 +28,6 @@ public class DatabaseManager {
         var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
         this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB,settings);
         log.info("DatabaseManager initialized with jOOQ for MariaDB");
-    }
-
-    public DSLContext getDslContext() {
-        return dslContext;
     }
 
     public void close() {

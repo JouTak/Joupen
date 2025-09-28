@@ -3,7 +3,6 @@ package org.joupen.repository.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.JoupenProperties;
@@ -15,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.joupen.utils.Utils.mapper;
 
@@ -29,57 +27,53 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
 
     @Override
     public Optional<PlayerEntity> findByUuid(UUID uuid) {
-        List<PlayerDto> playerDtos = readPlayerDtos();
+        List<PlayerEntity> playerDtos = readPlayerDtos();
         if (playerDtos == null) {
             return Optional.empty();
         }
         return playerDtos.stream()
                 .filter(dto -> dto.getUuid().equals(uuid))
-                .findFirst()
-                .map(playerMapper::dtoToEntity);
+                .findFirst();
     }
 
     @Override
     public Optional<PlayerEntity> findByName(String name) {
-        List<PlayerDto> playerDtos = readPlayerDtos();
+        List<PlayerEntity> playerDtos = readPlayerDtos();
         if (playerDtos == null) {
             return Optional.empty();
         }
         return playerDtos.stream()
                 .filter(dto -> dto.getName().equalsIgnoreCase(name))
-                .findFirst()
-                .map(playerMapper::dtoToEntity);
+                .findFirst();
     }
 
     @Override
     public List<PlayerEntity> findAll() {
-        List<PlayerDto> playerDtos = readPlayerDtos();
+        List<PlayerEntity> playerDtos = readPlayerDtos();
         if (playerDtos == null) {
             return new ArrayList<>();
         }
-        return playerDtos.stream()
-                .map(playerMapper::dtoToEntity)
-                .collect(Collectors.toList());
+        return playerDtos;
     }
 
     @Override
-    public void save(PlayerDto playerDto) {
-        List<PlayerDto> playerDtos = readPlayerDtos();
-        if (playerDtos == null) {
-            playerDtos = new ArrayList<>();
+    public void save(PlayerEntity entity) {
+        List<PlayerEntity> playerList = readPlayerDtos();
+        if (playerList == null) {
+            playerList = new ArrayList<>();
         }
-        playerDtos.add(playerDto);
-        writePlayerDtos(playerDtos);
+        playerList.add(entity);
+        writePlayerDtos(playerList);
     }
 
     @Override
-    public void updateByUuid(PlayerDto playerDto,UUID uuid) {
-        List<PlayerDto> playerDtos = readPlayerDtos();
-        if (playerDtos != null) {
-            for (int i = 0; i < playerDtos.size(); i++) {
-                if (playerDtos.get(i).getUuid().equals(uuid)) {
-                    playerDtos.set(i, playerDto);
-                    writePlayerDtos(playerDtos);
+    public void updateByUuid(PlayerEntity playerDto, UUID uuid) {
+        List<PlayerEntity> playerList = readPlayerDtos();
+        if (playerList != null) {
+            for (int i = 0; i < playerList.size(); i++) {
+                if (playerList.get(i).getUuid().equals(uuid)) {
+                    playerList.set(i, playerDto);
+                    writePlayerDtos(playerList);
                     return;
                 }
             }
@@ -87,12 +81,12 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     }
 
     @Override
-    public void updateByName(PlayerDto playerDto, String name) {
-        List<PlayerDto> playerDtos = readPlayerDtos();
+    public void updateByName(PlayerEntity entity, String name) {
+        List<PlayerEntity> playerDtos = readPlayerDtos();
         if (playerDtos != null) {
             for (int i = 0; i < playerDtos.size(); i++) {
                 if (playerDtos.get(i).getName().equals(name)) {
-                    playerDtos.set(i, playerDto);
+                    playerDtos.set(i, entity);
                     writePlayerDtos(playerDtos);
                     return;
                 }
@@ -102,7 +96,7 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
 
     @Override
     public void delete(UUID uuid) {
-        List<PlayerDto> playerDtos = readPlayerDtos();
+        List<PlayerEntity> playerDtos = readPlayerDtos();
         if (playerDtos != null) {
             playerDtos.removeIf(dto -> dto.getUuid().equals(uuid));
             writePlayerDtos(playerDtos);
@@ -110,12 +104,11 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     }
 
 
-
-    private List<PlayerDto> readPlayerDtos() {
+    private List<PlayerEntity> readPlayerDtos() {
         try {
             File jsonFile = new File(JoupenProperties.playersFilepath);
             log.info("Reading from file: {}", jsonFile.getAbsolutePath());
-            return mapper.readValue(jsonFile, new TypeReference<List<PlayerDto>>() {
+            return mapper.readValue(jsonFile, new TypeReference<>() {
             });
         } catch (IOException e) {
             log.error("Error reading players file", e);
@@ -123,10 +116,10 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
         }
     }
 
-    private void writePlayerDtos(List<PlayerDto> playerDtos) {
+    private void writePlayerDtos(List<PlayerEntity> players) {
         try {
             File jsonFile = new File(JoupenProperties.playersFilepath);
-            mapper.writeValue(jsonFile, playerDtos);
+            mapper.writeValue(jsonFile, players);
         } catch (IOException e) {
             log.error("Error writing players file", e);
         }

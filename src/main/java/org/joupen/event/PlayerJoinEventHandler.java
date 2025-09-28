@@ -8,21 +8,24 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
-import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.TimeUtils;
-import org.mapstruct.factory.Mappers;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.joupen.enums.UUIDTypes.INITIAL_UUID;
 
@@ -30,13 +33,9 @@ import static org.joupen.enums.UUIDTypes.INITIAL_UUID;
 public class PlayerJoinEventHandler implements Listener {
 
     private final PlayerRepository playerRepository;
-    private final PlayerMapper playerMapper;
-    private final TransactionManager transactionManager;
 
-    public PlayerJoinEventHandler(PlayerRepository playerRepository, TransactionManager transactionManager) {
+    public PlayerJoinEventHandler(PlayerRepository playerRepository) {
         this.playerRepository = playerRepository;
-        this.playerMapper = Mappers.getMapper(PlayerMapper.class);
-        this.transactionManager = transactionManager;
     }
 
     @EventHandler
@@ -63,11 +62,11 @@ public class PlayerJoinEventHandler implements Listener {
             return;
         }
 
-        PlayerDto playerDto = playerMapper.entityToDto(optionalEntity.get());
+        PlayerEntity playerEntity = optionalEntity.get();
 
         // Проверка срока действия подписки
-        if (playerDto.getValidUntil().isBefore(LocalDateTime.now())) {
-            log.info("У игрока {} была подписка до {}", player.getName(), playerDto.getValidUntil());
+        if (playerEntity.getValidUntil().isBefore(LocalDateTime.now())) {
+            log.info("У игрока {} была подписка до {}", playerEntity.getName(), playerEntity.getValidUntil());
             TextComponent textComponent = Component.text()
                     .append(Component.text("Проходка кончилась((( Надо оплатить и написать ", NamedTextColor.BLUE))
                     .append(Component.text("EnderDiss'e", NamedTextColor.RED))
@@ -76,25 +75,24 @@ public class PlayerJoinEventHandler implements Listener {
             return;
         }
 
-        // Обновление UUID и продление подписки
-        UUID uuid = playerDto.getUuid();
+        UUID uuid = playerEntity.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
             LocalDateTime now = LocalDateTime.now();
-            LocalDateTime validUntil = playerDto.getValidUntil()
-                    .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
+            LocalDateTime validUntil = playerEntity.getValidUntil()
+                    .plusDays(ChronoUnit.DAYS.between(playerEntity.getLastProlongDate(), now));
 
-            playerDto.setValidUntil(validUntil);
-            playerDto.setLastProlongDate(now);
-            playerDto.setUuid(playerLoginEvent.getPlayer().getUniqueId());
+            playerEntity.setValidUntil(validUntil);
+            playerEntity.setLastProlongDate(now);
+            playerEntity.setUuid(playerLoginEvent.getPlayer().getUniqueId());
 
             try {
-                playerRepository.updateByName(playerDto, playerLoginEvent.getPlayer().getName());
+                playerRepository.updateByName(playerEntity, playerLoginEvent.getPlayer().getName());
 
                 log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}",
-                        playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
+                        playerEntity.getName(), playerLoginEvent.getPlayer().getUniqueId());
             } catch (Exception e) {
-                log.error("Failed to update player {} in repository: {}", playerDto.getName(), e.getMessage());
-                throw new RuntimeException("Failed to update player data", e);
+                log.error("Failed to update playerEntity {} in repository: {}", playerEntity.getName(), e.getMessage());
+                throw new RuntimeException("Failed to update playerEntity data", e);
             }
         }
 
@@ -134,24 +132,22 @@ public class PlayerJoinEventHandler implements Listener {
                         duration = TimeUtils.parseDuration(reward);
                     } catch (IllegalArgumentException e) {
                         log.error("Невалидный подарок '{}' для игрока {}", reward, nick);
-                        event.disallow(PlayerLoginEvent.Result.KICK_OTHER,
-                                Component.text("Ошибка: неверный формат подарка (" + reward + "). " + "Напиши по этому поводу EnderDiss'e", NamedTextColor.RED));
-                        return false; // сразу кикаем игрока
+                        event.disallow(PlayerLoginEvent.Result.KICK_OTHER, Component.text("Ошибка: неверный формат подарка (" + reward + "). " + "Напиши по этому поводу EnderDiss'e", NamedTextColor.RED));
+                        return false;
                     }
 
                     LocalDateTime newValidUntil = LocalDateTime.now().plus(duration);
 
-                    // Проверяем — есть ли игрок в базе
                     Optional<PlayerEntity> optionalEntity = playerRepository.findByName(nick);
 
                     if (optionalEntity.isPresent()) {
-                        PlayerDto dto = playerMapper.entityToDto(optionalEntity.get());
+                        PlayerEntity dto = optionalEntity.get();
                         dto.setValidUntil(newValidUntil);
                         dto.setLastProlongDate(LocalDateTime.now());
                         dto.setUuid(player.getUniqueId());
                         playerRepository.updateByName(dto, nick);
                     } else {
-                        PlayerDto dto = new PlayerDto();
+                        PlayerEntity dto = new PlayerEntity();
                         dto.setName(nick);
                         dto.setUuid(player.getUniqueId());
                         dto.setValidUntil(newValidUntil);

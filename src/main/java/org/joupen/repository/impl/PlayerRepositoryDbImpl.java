@@ -42,9 +42,8 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     }
 
     @Override
-    public void save(PlayerDto playerDto) {
+    public void save(PlayerEntity entity) {
         transactionManager.executeInTransaction(txDsl -> {
-            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             txDsl.insertInto(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, entity.getUuid().toString())
                     .set(Players.PLAYERS.NAME, entity.getName())
@@ -69,9 +68,8 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     }
 
     @Override
-    public void updateByName(PlayerDto playerDto, String name) {
+    public void updateByName(PlayerEntity entity, String name) {
         transactionManager.executeInTransaction(txDsl -> {
-            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             int rowsAffected = txDsl.update(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, entity.getUuid().toString())
                     .set(Players.PLAYERS.NAME, entity.getName())
@@ -89,9 +87,8 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     }
 
     @Override
-    public void updateByUuid(PlayerDto playerDto, UUID uuid) {
+    public void updateByUuid(PlayerEntity entity, UUID uuid) {
         transactionManager.executeInTransaction(txDsl -> {
-            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             int rowsAffected = txDsl.update(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, entity.getUuid().toString())
                     .set(Players.PLAYERS.NAME, entity.getName())

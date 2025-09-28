@@ -1,96 +1,97 @@
 package org.joupen.utils;
 
-import org.joupen.JoupenPlugin;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.logging.Logger;
 
+@Slf4j
 public final class JoupenProperties {
 
-    private static Logger LOGGER;
-    private static JoupenPlugin plugin;
     public static String playersFilepath;
     public static Boolean useSql = false;
     public static Boolean migrate = false;
     public static Boolean enabled = true;
     public static Map<String, Object> dbConfig;
-    private static boolean initialized = false;
+    public static boolean isInitialized = false;
 
     private JoupenProperties() {
     }
 
-    public static void initialize(JoupenPlugin pluginInstance) {
-        if (initialized) {
-            LOGGER.warning("JoupenProperties already initialized, skipping");
-            return;
-        }
-        plugin = pluginInstance;
-        LOGGER = plugin.getLogger(); // Инициализация логгера Bukkit
-        loadConfig(plugin.getDataFolder());
-        initialized = true;
+    public static void initialize(File pluginFolder) {
+        if (isInitialized) return;
+        loadConfig(pluginFolder);
+        isInitialized = true;
     }
 
-    public static void loadForTests(File configDir) {
-        if (initialized) {
-            LOGGER.warning("JoupenProperties already initialized, skipping test load");
-            return;
-        }
-        LOGGER = Logger.getLogger(JoupenProperties.class.getName()); // Для тестов
-        loadConfig(configDir);
-        initialized = true;
+    /**
+     * Инициализация напрямую из Map (например, в тестах)
+     */
+    public static void initialize(Map<String, Object> config) {
+        if (isInitialized) return;
+        applyConfig(config, new File("."));
+        isInitialized = true;
     }
 
     private static void loadConfig(File configDir) {
-        LOGGER.info("Plugin data folder: " + configDir.getAbsolutePath());
+        log.info("Plugin data folder: {}", configDir.getAbsolutePath());
+
         FileUtils.ensureDirectoryExists(configDir);
         File configFile = new File(configDir, "config.yml");
-        LOGGER.info("Checking config file: " + configFile.getAbsolutePath());
+        log.info("Checking config file: {}", configFile.getAbsolutePath());
+
         if (!configFile.exists()) {
-            LOGGER.info("Config file does not exist, creating default config.yml");
+            log.info("Config file does not exist, creating default config.yml");
             createDefaultConfig(configFile);
         } else {
-            LOGGER.info("Config file already exists: " + configFile.getAbsolutePath());
+            log.info("Config file already exists: {}", configFile.getAbsolutePath());
         }
 
         Map<String, Object> config = loadYaml(configFile);
-        LOGGER.info("Loaded config:\n" + config);
+        log.info("Loaded config:\n{}", config);
 
+        applyConfig(config, configDir);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyConfig(Map<String, Object> config, File configDir) {
         Map<String, Object> pluginConfig = (Map<String, Object>) config.getOrDefault("plugin", Map.of());
+
         playersFilepath = new File(configDir, (String) pluginConfig.getOrDefault("playersFile", "player.json")).getPath();
+
         useSql = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("useSql", false)));
         migrate = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("migrate", false)));
         enabled = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("enabled", true)));
-        // Используем String.format для форматирования
-        LOGGER.info(String.format("Plugin config: playersFilepath=%s, enabled=%s, useSql=%s, migrate=%s",
-                playersFilepath, enabled, useSql, migrate));
+
+        log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}", playersFilepath, enabled, useSql, migrate);
 
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
-            LOGGER.info("Database config: " + dbConfig);
+            log.info("Database config: {}", dbConfig);
         } else {
             dbConfig = null;
-            LOGGER.info("SQL disabled, dbConfig set to null");
+            log.info("SQL disabled, dbConfig set to null");
         }
     }
 
     private static Map<String, Object> loadYaml(File configFile) {
         try {
             if (!configFile.exists()) {
-                LOGGER.severe("Config file does not exist: " + configFile.getAbsolutePath());
+                log.warn("Config file does not exist: {}", configFile.getAbsolutePath());
                 throw new IllegalStateException("Config file does not exist: " + configFile.getAbsolutePath());
             }
-            LOGGER.info("Loading YAML from: " + configFile.getAbsolutePath());
+            log.info("Loading YAML from: {}", configFile.getAbsolutePath());
+
             return YamlUtils.loadYaml(configFile);
         } catch (IOException e) {
-            LOGGER.severe("Failed to load config.yml: " + configFile.getAbsolutePath() + " - " + e.getMessage());
+            log.error("Failed to load config.yml: {} - {}", configFile.getAbsolutePath(), e.getMessage());
             throw new IllegalStateException("Failed to load config.yml", e);
         }
     }
 
     private static void createDefaultConfig(File configFile) {
-        LOGGER.info("Creating default config at: " + configFile.getAbsolutePath());
+        log.info("Creating default config at: {}", configFile.getAbsolutePath());
         String defaultContent = """
                 plugin:
                   enabled: true
@@ -105,13 +106,13 @@ public final class JoupenProperties {
                 """;
         try {
             if (configFile.exists()) {
-                LOGGER.info("Config file already exists, skipping creation: " + configFile.getAbsolutePath());
+                log.info("Config file already exists, skipping creation: {}", configFile.getAbsolutePath());
                 return;
             }
             YamlUtils.createDefaultYaml(configFile, defaultContent);
-            LOGGER.info("Successfully created default config.yml");
+            log.info("Successfully created default config.yml");
         } catch (IOException e) {
-            LOGGER.severe("Failed to create default config.yml: " + configFile.getAbsolutePath() + " - " + e.getMessage());
+            log.error("Failed to create default config.yml: {} - {}", configFile.getAbsolutePath(), e.getMessage());
             throw new IllegalStateException("Failed to create default config.yml", e);
         }
     }
