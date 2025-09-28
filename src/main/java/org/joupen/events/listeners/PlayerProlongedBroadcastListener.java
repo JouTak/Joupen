@@ -13,7 +13,7 @@ public class PlayerProlongedBroadcastListener implements Consumer<PlayerProlonge
         try {
             String msg = event.gift() ? "Игрок " + event.player().getName() + " получил подарок!" : "Игрок " + event.player().getName() + " продлил проходку!";
             Bukkit.getServer().sendMessage(Component.text(msg));
-        }catch (Exception e) {
+        } catch (Exception e) {
 
         }
     }

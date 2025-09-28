@@ -32,6 +32,7 @@ public class Utils {
             return null;
         }
     }
+
     public static <T> T fromJson(String json, Class<T> clazz) {
         try {
             return mapper.readValue(json, clazz);

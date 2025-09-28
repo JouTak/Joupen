@@ -1,7 +1,6 @@
 package org.joupen.repository;
 
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 
 import java.util.List;
 import java.util.Optional;

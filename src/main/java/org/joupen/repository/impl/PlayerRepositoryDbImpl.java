@@ -3,7 +3,6 @@ package org.joupen.repository.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 import org.joupen.jooq.generated.tables.Players;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;

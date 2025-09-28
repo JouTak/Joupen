@@ -113,7 +113,7 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
                 .insertInto(Players.PLAYERS)
                 .set(Players.PLAYERS.UUID, player.getUuid().toString())
                 .set(Players.PLAYERS.NAME, player.getName())
-                    .set(Players.PLAYERS.PAID, player.getPaid())
+                .set(Players.PLAYERS.PAID, player.getPaid())
                 .returning(Players.PLAYERS.ID)
                 .fetchOne()
                 .getId());

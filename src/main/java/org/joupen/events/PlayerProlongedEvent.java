@@ -1,7 +1,6 @@
 package org.joupen.events;
 
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 
 import java.time.Duration;
 

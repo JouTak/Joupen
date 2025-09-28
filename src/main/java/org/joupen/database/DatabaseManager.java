@@ -26,7 +26,7 @@ public class DatabaseManager {
         config.setMaximumPoolSize(10);
         this.dataSource = new HikariDataSource(config);
         var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
-        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB,settings);
+        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB, settings);
         log.info("DatabaseManager initialized with jOOQ for MariaDB");
     }
 
