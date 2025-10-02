@@ -1,4 +1,4 @@
-package org.joupen.event;
+package org.joupen.events;
 
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;

@@ -3,14 +3,16 @@ package org.joupen.commands;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.CommandSender;
 import org.joupen.commands.impl.*;
+import org.joupen.events.SendPrivateMessageEvent;
 import org.joupen.service.PlayerImportService;
 import org.joupen.service.PlayerService;
+import org.joupen.utils.EventUtils;
 import org.joupen.utils.TimeUtils;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 @Slf4j
@@ -27,80 +29,28 @@ public class JoupenCommandFactory {
         String sub = args[0].toLowerCase(Locale.ROOT);
         String[] tail = Arrays.copyOfRange(args, 1, args.length);
 
-        return switch (sub) {
+        GameCommand command = switch (sub) {
             case "help" -> new HelpCommand(ctx.getSender());
             case "link" -> new LinkCommand(ctx.getSender());
-            case "info" -> buildInfo(ctx, tail);
-            case "prolong" -> buildProlong(ctx, tail, false);
-            case "gift" -> buildGift(ctx, tail);
-            case "addalltowhitelist" -> buildAddAll(ctx, tail);
+            case "info" ->
+                    new InfoCommand(ctx.getSender(), ctx.getPlayerRepository(), ctx.getPlayerMapper(), tail.length == 0 ? ctx.getSender().getName() : tail[0]);
+            case "prolong" ->
+                    new ProlongCommand(new PlayerService(ctx.getPlayerRepository()), tail.length > 0 ? tail[0] : "", tail.length >= 2 ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30), false);
+            case "gift" ->
+                    new GiftCommand(ctx.getSender(), new PlayerService(ctx.getPlayerRepository()), tail.length > 0 ? tail[0] : "", tail.length >= 2 ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30));
+            case "addalltowhitelist" ->
+                    new AddAllToWhitelistCommand(ctx.getSender(), new PlayerImportService(ctx.getPlayerRepository()), new PlayerService(ctx.getPlayerRepository()), tail.length > 0 ? tail[0] : "", tail.length > 1 ? tail[1] : "");
             default ->
-                    () -> ctx.getSender().sendMessage(Component.text("Unknown subcommand. Try /joupen help", NamedTextColor.RED));
+                    () -> EventUtils.publish(new SendPrivateMessageEvent(ctx.getSender(), Component.text("Unknown subcommand. Try /joupen help", NamedTextColor.RED)));
         };
-    }
 
-    private GameCommand buildInfo(BuildContext ctx, String[] tail) {
-        if (tail.length == 0) {
-            return new InfoCommand(ctx.getSender(), ctx.getPlayerRepository(), ctx.getPlayerMapper(), ctx.getSender().getName());
+        if (command instanceof CommandValidator validator) {
+            List<Component> errors = validator.validate(ctx, tail);
+            if (!errors.isEmpty()) {
+                return () -> errors.forEach(msg -> EventUtils.publish(new SendPrivateMessageEvent(ctx.getSender(), msg)));
+            }
         }
 
-        if (!hasPerm(ctx.getSender())) {
-            return () -> ctx.getSender().sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
-        }
-        return new InfoCommand(ctx.getSender(), ctx.getPlayerRepository(), ctx.getPlayerMapper(), tail[0]);
-    }
-
-    private GameCommand buildProlong(BuildContext ctx, String[] tail, boolean gift) {
-
-        if (!ctx.getSender().hasPermission("joupen.admin")) {
-            return () -> ctx.getSender().sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
-        }
-
-        if (tail.length < 1) {
-            return () -> ctx.getSender().sendMessage(Component.text("Usage: /joupen " + (gift ? "gift" : "prolong") + " <player|all> [duration]", NamedTextColor.RED));
-        }
-
-        String target = tail[0];
-        Duration dur;
-        try {
-            dur = (tail.length >= 2) ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30);
-        } catch (Exception e) {
-            return () -> ctx.getSender().sendMessage(Component.text("Invalid duration format. Example: 3d2h7m", NamedTextColor.RED));
-        }
-
-        PlayerService service = new PlayerService(ctx.getPlayerRepository());
-        return gift ? new GiftCommand(ctx.getSender(), service, target, dur) : new ProlongCommand(service, target, dur, false);
-    }
-
-    private GameCommand buildGift(BuildContext ctx, String[] tail) {
-        if (!hasPerm(ctx.getSender())) {
-            return () -> ctx.getSender().sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
-        }
-        if (tail.length < 1) {
-            return () -> ctx.getSender().sendMessage(Component.text("Usage: /joupen gift <player|all> [duration]", NamedTextColor.RED));
-        }
-        String target = tail[0];
-        Duration dur = (tail.length >= 2) ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30);
-
-        PlayerService service = new PlayerService(ctx.getPlayerRepository());
-
-        return new GiftCommand(ctx.getSender(), service, target, dur);
-    }
-
-
-    private GameCommand buildAddAll(BuildContext ctx, String[] tail) {
-        if (!hasPerm(ctx.getSender())) {
-            return () -> ctx.getSender().sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
-        }
-        if (tail.length < 2) {
-            return () -> ctx.getSender().sendMessage(Component.text("Usage: /joupen addAllToWhitelist <filePath> <days>", NamedTextColor.RED));
-        }
-        String file = tail[0];
-        String days = tail[1];
-        return new AddAllToWhitelistCommand(ctx.getSender(), new PlayerImportService(ctx.getPlayerRepository()), new PlayerService(ctx.getPlayerRepository()), file, days);
-    }
-
-    private boolean hasPerm(CommandSender sender) {
-        return sender.hasPermission("joupen.admin");
+        return command;
     }
 }

@@ -4,7 +4,7 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
-import org.joupen.event.PlayerJoinEventHandler;
+import org.joupen.events.PlayerJoinEventHandler;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.junit.jupiter.api.BeforeEach;

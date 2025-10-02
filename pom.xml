@@ -252,10 +252,73 @@
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <filters>
+                                <!-- Оставляем только runtime-библиотеки -->
                                 <filter>
-                                    <artifact>*:*</artifact>
+                                    <artifact>com.zaxxer:HikariCP</artifact>
                                     <includes>
                                         <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.mariadb.jdbc:mariadb-java-client</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.jooq:jooq</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.core:jackson-databind</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.yaml:snakeyaml</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+
+                                <!-- Явно исключаем dev/test зависимости -->
+                                <filter>
+                                    <artifact>org.projectlombok:*</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.mapstruct:*</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.liquibase:liquibase-core</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.github.seeseemelk:MockBukkit-v1.20</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.testcontainers:*</artifact>
+                                    <includes>
+                                        <include>nothing</include>
                                     </includes>
                                 </filter>
                             </filters>
@@ -270,6 +333,7 @@
                     </execution>
                 </executions>
             </plugin>
+
 
             <!-- Resources -->
             <plugin>

@@ -13,7 +13,7 @@ import org.joupen.utils.JoupenProperties;
 
 @Slf4j
 @Getter
-public class DatabaseManager {
+public class DatabaseManager implements AutoCloseable {
     private final HikariDataSource dataSource;
     private final DSLContext dslContext;
 
