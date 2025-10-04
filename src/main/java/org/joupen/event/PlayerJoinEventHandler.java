@@ -2,7 +2,6 @@ package org.joupen.event;
 
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,7 +15,8 @@ import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.TimeUtils;
 import org.mapstruct.factory.Mappers;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Duration;
@@ -43,10 +43,7 @@ public class PlayerJoinEventHandler implements Listener {
     public void playerJoinEvent(PlayerLoginEvent playerLoginEvent) {
         Player player = playerLoginEvent.getPlayer();
 
-        // Проверяем подарки, если есть ошибка в формате — сразу кикаем
-        if (!checkGiftFile(player, playerLoginEvent)) {
-            return; // игрок уже кикнут
-        }
+        checkGiftFile(player);
 
         // Ищем игрока в репозитории
         Optional<PlayerEntity> optionalEntity = playerRepository.findByUuid(player.getUniqueId());
@@ -55,11 +52,10 @@ public class PlayerJoinEventHandler implements Listener {
         }
 
         if (optionalEntity.isEmpty()) {
-            TextComponent textComponent = Component.text()
-                    .append(Component.text("Тебя нет в вайтлисте. Напиши по этому поводу ", NamedTextColor.BLUE))
-                    .append(Component.text("EnderDiss'e", NamedTextColor.RED))
-                    .build();
-            playerLoginEvent.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, textComponent);
+            playerLoginEvent.disallow(
+                    PlayerLoginEvent.Result.KICK_WHITELIST,
+                    Component.text("Тебя нет в вайтлисте. Напиши по этому поводу EnderDiss'e", NamedTextColor.RED)
+            );
             return;
         }
 
@@ -68,17 +64,15 @@ public class PlayerJoinEventHandler implements Listener {
         // Проверка срока действия подписки
         if (playerDto.getValidUntil().isBefore(LocalDateTime.now())) {
             log.info("У игрока {} была подписка до {}", player.getName(), playerDto.getValidUntil());
-            TextComponent textComponent = Component.text()
-                    .append(Component.text("Проходка кончилась((( Надо оплатить и написать ", NamedTextColor.BLUE))
-                    .append(Component.text("EnderDiss'e", NamedTextColor.RED))
-                    .build();
-            playerLoginEvent.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, textComponent);
+            playerLoginEvent.disallow(
+                    PlayerLoginEvent.Result.KICK_WHITELIST,
+                    Component.text("Проходка кончилась((( Надо оплатить и написать EnderDiss'e", NamedTextColor.RED)
+            );
             return;
         }
 
         // Обновление UUID и продление подписки
-        UUID uuid = playerDto.getUuid();
-        if (uuid.equals(INITIAL_UUID.getUuid())) {
+        if (playerDto.getUuid().equals(INITIAL_UUID.getUuid())) {
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime validUntil = playerDto.getValidUntil()
                     .plusDays(ChronoUnit.DAYS.between(playerDto.getLastProlongDate(), now));
@@ -89,7 +83,6 @@ public class PlayerJoinEventHandler implements Listener {
 
             try {
                 playerRepository.updateByName(playerDto, playerLoginEvent.getPlayer().getName());
-
                 log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}",
                         playerDto.getName(), playerLoginEvent.getPlayer().getUniqueId());
             } catch (Exception e) {
@@ -102,16 +95,16 @@ public class PlayerJoinEventHandler implements Listener {
     }
 
     /**
-     * Проверка gifts.txt. Если игрок найден — создаётся/обновляется запись в базе и начисляется проходка.
-     * Если формат подарка некорректный — игрок кикается.
+     * Проверяет файл gifts.txt. Если игрок найден — создаётся или обновляется запись в базе и начисляется проходка.
+     * Если формат подарка некорректный — игроку выводится сообщение в чат, а строка остаётся в файле.
      *
-     * @return true если всё ок, false если игрок кикнут
+     * <p>Ошибки формата не мешают игроку зайти на сервер, но логируются для администратора.</p>
+     *
+     * @param player игрок, которому проверяется подарок
      */
-    private boolean checkGiftFile(Player player, PlayerLoginEvent event) {
+    private void checkGiftFile(Player player) {
         Path giftsFile = Paths.get("plugins/joupen/gifts.txt");
-        if (!Files.exists(giftsFile)) {
-            return true;
-        }
+        if (!Files.exists(giftsFile)) return;
 
         List<String> updatedLines = new ArrayList<>();
         boolean rewarded = false;
@@ -133,17 +126,18 @@ public class PlayerJoinEventHandler implements Listener {
                     try {
                         duration = TimeUtils.parseDuration(reward);
                     } catch (IllegalArgumentException e) {
-                        log.error("Невалидный подарок '{}' для игрока {}", reward, nick);
-                        event.disallow(PlayerLoginEvent.Result.KICK_OTHER,
-                                Component.text("Ошибка: неверный формат подарка (" + reward + "). " + "Напиши по этому поводу EnderDiss'e", NamedTextColor.RED));
-                        return false; // сразу кикаем игрока
+                        log.error("Invalid gift '{}' for {}", reward, nick);
+                        player.sendMessage(Component.text(
+                                "Ошибка: неверный формат подарка (" + reward + "). Обратись к EnderDiss'e",
+                                NamedTextColor.RED
+                        ));
+                        updatedLines.add(line); // оставляем строку как есть
+                        continue;
                     }
 
                     LocalDateTime newValidUntil = LocalDateTime.now().plus(duration);
 
-                    // Проверяем — есть ли игрок в базе
                     Optional<PlayerEntity> optionalEntity = playerRepository.findByName(nick);
-
                     if (optionalEntity.isPresent()) {
                         PlayerDto dto = playerMapper.entityToDto(optionalEntity.get());
                         dto.setValidUntil(newValidUntil);
@@ -159,8 +153,10 @@ public class PlayerJoinEventHandler implements Listener {
                         playerRepository.save(dto);
                     }
 
-                    player.sendMessage(Component.text("Ура! Тебе добавили проходку: "
-                            + TimeUtils.formatDuration(duration), NamedTextColor.GOLD));
+                    player.sendMessage(Component.text(
+                            "Ура! Тебе добавили проходку: " + TimeUtils.formatDuration(duration),
+                            NamedTextColor.GOLD
+                    ));
                     log.info("Player {} got a reward {}", nick, reward);
 
                     rewarded = true;
@@ -179,7 +175,5 @@ public class PlayerJoinEventHandler implements Listener {
                 log.error("Writing error gifts.txt: {}", e.getMessage());
             }
         }
-
-        return true;
     }
 }
