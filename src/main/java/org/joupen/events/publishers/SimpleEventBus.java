@@ -2,16 +2,20 @@ package org.joupen.events.publishers;
 
 import org.joupen.events.Event;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 public class SimpleEventBus implements EventPublisher {
-    private final ConcurrentHashMap<Class<? extends Event>, List<Consumer<? extends Event>>> listeners = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Class<? extends Event>, CopyOnWriteArrayList<Consumer<? extends Event>>> listeners = new ConcurrentHashMap<>();
 
     public <T extends Event> void register(Class<T> eventType, Consumer<T> listener) {
-        listeners.computeIfAbsent(eventType, k -> new ArrayList<>()).add(listener);
+        listeners.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>()).add(listener);
+    }
+
+    public void reset() {
+        listeners.clear();
     }
 
     @SuppressWarnings("unchecked")

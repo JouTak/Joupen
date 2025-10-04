@@ -19,7 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class JoupenCommandFactoryTest {
 
@@ -34,7 +35,6 @@ public class JoupenCommandFactoryTest {
         mapper = Mappers.getMapper(PlayerMapper.class);
         bus = new SimpleEventBus();
         inbox = new ArrayList<>();
-        // перехватываем личные сообщения
         EventUtils.register(SendPrivateMessageEvent.class, evt -> {
             Component c = evt.message();
             inbox.add(PlainTextComponentSerializer.plainText().serialize(c));
@@ -49,7 +49,6 @@ public class JoupenCommandFactoryTest {
                 .playerRepository(repo)
                 .playerMapper(mapper)
                 .transactionManager(null)
-                .simpleEventBus(bus)
                 .build();
     }
 
@@ -60,7 +59,6 @@ public class JoupenCommandFactoryTest {
 
         GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "joupen"));
         assertNotNull(cmd);
-        // help-команда просто не должна падать при выполнении
         assertDoesNotThrow(cmd::execute);
     }
 

@@ -1,11 +1,8 @@
 package org.joupen.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.joupen.database.DatabaseManager;
-import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.repository.PlayerRepository;
-import org.joupen.repository.PlayerRepositoryFactory;
 import org.joupen.repository.impl.PlayerRepositoryFileImpl;
 import org.joupen.utils.JoupenProperties;
 
@@ -24,8 +21,6 @@ public class MigrationService {
     public void migrate() {
         if (JoupenProperties.useSql) {
             migrateFromFileToDatabase();
-        } else {
-            migrateFromDatabaseToFile();
         }
     }
 
@@ -53,21 +48,5 @@ public class MigrationService {
             }
         }
         log.info("Migration from file to database completed.");
-    }
-
-    private void migrateFromDatabaseToFile() {
-        try (DatabaseManager tempDbManager = new DatabaseManager()) {
-            TransactionManager tempTx = new TransactionManager(tempDbManager);
-            PlayerRepository tempRepo = PlayerRepositoryFactory.getPlayerRepository(tempDbManager, tempTx);
-            List<PlayerEntity> entities = tempRepo.findAll();
-            if (entities.isEmpty()) {
-                log.info("No players found in database for migration.");
-                return;
-            }
-            entities.forEach(playerRepository::save);
-            log.info("Migration from database to file completed.");
-        } catch (Exception e) {
-            log.error("Failed to migrate from database to file: {}", e.getMessage(), e);
-        }
     }
 }

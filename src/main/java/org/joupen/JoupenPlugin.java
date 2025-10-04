@@ -31,7 +31,6 @@ public class JoupenPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Загружаем конфиг
         try {
             JoupenProperties.initialize(this.getDataFolder());
         } catch (Exception e) {
@@ -44,7 +43,6 @@ public class JoupenPlugin extends JavaPlugin {
             return;
         }
 
-        // Инициализация репозитория
         try {
             if (JoupenProperties.useSql) {
                 databaseManager = new DatabaseManager();
@@ -58,16 +56,13 @@ public class JoupenPlugin extends JavaPlugin {
             return;
         }
 
-        // Миграция вынесена в отдельный сервис
         if (JoupenProperties.migrate) {
             new MigrationService(playerRepository).migrate();
         }
 
-        // Регистрируем команду и слушатели
         new JoupenCommand(playerRepository, transactionManager);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
 
-        // Регистрируем события
         EventUtils.register(PlayerProlongedEvent.class, new PlayerProlongedBroadcastListener());
         EventUtils.register(SendPrivateMessageEvent.class, new PrivateMessageListener());
 

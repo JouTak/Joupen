@@ -85,7 +85,7 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
         List<PlayerEntity> playerDtos = readPlayerDtos();
         if (playerDtos != null) {
             for (int i = 0; i < playerDtos.size(); i++) {
-                if (playerDtos.get(i).getName().equals(name)) {
+                if (playerDtos.get(i).getName().equalsIgnoreCase(name)) {
                     playerDtos.set(i, entity);
                     writePlayerDtos(playerDtos);
                     return;

@@ -29,17 +29,19 @@ public class JoupenCommandFactory {
         String sub = args[0].toLowerCase(Locale.ROOT);
         String[] tail = Arrays.copyOfRange(args, 1, args.length);
 
+        PlayerService ps = ctx.getPlayerService() != null ? ctx.getPlayerService() : new PlayerService(ctx.getPlayerRepository());
+
         GameCommand command = switch (sub) {
             case "help" -> new HelpCommand(ctx.getSender());
             case "link" -> new LinkCommand(ctx.getSender());
             case "info" ->
                     new InfoCommand(ctx.getSender(), ctx.getPlayerRepository(), ctx.getPlayerMapper(), tail.length == 0 ? ctx.getSender().getName() : tail[0]);
             case "prolong" ->
-                    new ProlongCommand(new PlayerService(ctx.getPlayerRepository()), tail.length > 0 ? tail[0] : "", tail.length >= 2 ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30), false);
+                    new ProlongCommand(ps, tail.length > 0 ? tail[0] : "", tail.length >= 2 ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30), false);
             case "gift" ->
-                    new GiftCommand(ctx.getSender(), new PlayerService(ctx.getPlayerRepository()), tail.length > 0 ? tail[0] : "", tail.length >= 2 ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30));
+                    new GiftCommand(ctx.getSender(), ps, tail.length > 0 ? tail[0] : "", tail.length >= 2 ? TimeUtils.parseDuration(tail[1]) : Duration.ofDays(30));
             case "addalltowhitelist" ->
-                    new AddAllToWhitelistCommand(ctx.getSender(), new PlayerImportService(ctx.getPlayerRepository()), new PlayerService(ctx.getPlayerRepository()), tail.length > 0 ? tail[0] : "", tail.length > 1 ? tail[1] : "");
+                    new AddAllToWhitelistCommand(ctx.getSender(), new PlayerImportService(ctx.getPlayerRepository()), ps, tail.length > 0 ? tail[0] : "", tail.length > 1 ? tail[1] : "");
             default ->
                     () -> EventUtils.publish(new SendPrivateMessageEvent(ctx.getSender(), Component.text("Unknown subcommand. Try /joupen help", NamedTextColor.RED)));
         };
@@ -50,7 +52,6 @@ public class JoupenCommandFactory {
                 return () -> errors.forEach(msg -> EventUtils.publish(new SendPrivateMessageEvent(ctx.getSender(), msg)));
             }
         }
-
         return command;
     }
 }

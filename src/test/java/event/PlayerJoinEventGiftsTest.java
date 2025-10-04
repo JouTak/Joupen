@@ -1,6 +1,5 @@
 package event;
 
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.events.PlayerJoinEventHandler;
@@ -51,13 +50,10 @@ public class PlayerJoinEventGiftsTest extends BaseTest {
 
     @Test
     void giftValidLine_shouldProlongAndRemoveLineFromFile_whenPlayerNotExists() throws Exception {
-        // arrange: TestPlayer 3d + чужая строка
-        Files.writeString(giftsFile,
-                "TestPlayer 3d\nOther 2d\n",
-                StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.writeString(giftsFile, "TestPlayer 3d\nOther 2d\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-        when(repo.findByUuid(player.getUniqueId())).thenReturn(Optional.empty());
-        when(repo.findByName("TestPlayer")).thenReturn(Optional.empty()); // создать нового
+        when(repo.findByUuid(player.getUniqueId())).thenReturn(Optional.of(new PlayerEntity(player.getName(), false, player.getUniqueId(), LocalDateTime.now().plusDays(3), LocalDateTime.now())));
+        when(repo.findByName("TestPlayer")).thenReturn(Optional.empty());
 
         PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1"));
 

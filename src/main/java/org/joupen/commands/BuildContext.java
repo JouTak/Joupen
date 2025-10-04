@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Getter;
 import org.bukkit.command.CommandSender;
 import org.joupen.database.TransactionManager;
-import org.joupen.events.publishers.SimpleEventBus;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.service.PlayerService;
@@ -19,5 +18,4 @@ public class BuildContext {
     private final PlayerService playerService;
     private final PlayerMapper playerMapper;
     private final TransactionManager transactionManager;
-    private final SimpleEventBus simpleEventBus;
 }

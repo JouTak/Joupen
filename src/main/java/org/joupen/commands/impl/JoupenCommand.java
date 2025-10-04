@@ -8,7 +8,6 @@ import org.joupen.commands.BuildContext;
 import org.joupen.commands.GameCommand;
 import org.joupen.commands.JoupenCommandFactory;
 import org.joupen.database.TransactionManager;
-import org.joupen.events.publishers.SimpleEventBus;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.mapstruct.factory.Mappers;
@@ -34,7 +33,6 @@ public class JoupenCommand extends AbstractCommand {
                         .sender(sender)
                         .label(label)
                         .argsTail(args)
-                        .simpleEventBus(new SimpleEventBus())
                         .playerRepository(playerRepository)
                         .playerMapper(playerMapper)
                         .transactionManager(transactionManager)
