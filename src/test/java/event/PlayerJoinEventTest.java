@@ -3,14 +3,11 @@ package event;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 import org.joupen.events.PlayerJoinEventHandler;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,12 +30,9 @@ public class PlayerJoinEventTest extends BaseTest {
     private PlayerRepository playerRepository;
     @Mock
     private TransactionManager transactionManager;
-    @Mock
-    private PlayerMapper playerMapper;
 
     @BeforeEach
     void setUp() {
-        playerMapper = Mappers.getMapper(PlayerMapper.class);
         playerJoinEventHandler = new PlayerJoinEventHandler(playerRepository);
     }
 
@@ -73,8 +67,6 @@ public class PlayerJoinEventTest extends BaseTest {
         playerEntity.setLastProlongDate(LocalDateTime.now().minusDays(30));
         playerEntity.setPaid(true);
 
-        PlayerDto playerDto = playerMapper.entityToDto(playerEntity);
-
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
 
         PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", Objects.requireNonNull(player.getAddress()).getAddress());
@@ -100,8 +92,6 @@ public class PlayerJoinEventTest extends BaseTest {
         playerEntity.setValidUntil(validUntil);
         playerEntity.setLastProlongDate(lastProlongDate);
         playerEntity.setPaid(true);
-
-        PlayerDto playerDto = playerMapper.entityToDto(playerEntity);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.empty());
         when(playerRepository.findByName(TEST_NAME)).thenReturn(Optional.of(playerEntity));

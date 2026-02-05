@@ -179,7 +179,12 @@
             <version>1.20.1</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>ru.joutak</groupId>
+            <artifactId>minigamesapi</artifactId>
+            <version>1.0.0</version>
+            <classifier>all</classifier>
+        </dependency>
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -566,6 +571,10 @@
     </profiles>
 
     <repositories>
+        <repository>
+            <id>temp</id>
+            <url>https://maven.joutak.ru/releases/</url>
+        </repository>
         <repository>
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>

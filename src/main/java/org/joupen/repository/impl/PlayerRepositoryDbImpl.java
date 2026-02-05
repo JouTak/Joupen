@@ -4,9 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.jooq.generated.tables.Players;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
-import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,11 +12,9 @@ import java.util.UUID;
 
 @Slf4j
 public class PlayerRepositoryDbImpl implements PlayerRepository {
-    private final PlayerMapper playerMapper;
     private final TransactionManager transactionManager;
 
     public PlayerRepositoryDbImpl(TransactionManager transactionManager) {
-        this.playerMapper = Mappers.getMapper(PlayerMapper.class);
         this.transactionManager = transactionManager;
     }
 

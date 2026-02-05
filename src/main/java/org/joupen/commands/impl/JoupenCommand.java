@@ -8,22 +8,18 @@ import org.joupen.commands.BuildContext;
 import org.joupen.commands.GameCommand;
 import org.joupen.commands.JoupenCommandFactory;
 import org.joupen.database.TransactionManager;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
-import org.mapstruct.factory.Mappers;
 
 @Slf4j
 public class JoupenCommand extends AbstractCommand {
 
     private final PlayerRepository playerRepository;
     private final TransactionManager transactionManager;
-    private final PlayerMapper playerMapper;
 
     public JoupenCommand(PlayerRepository repo, TransactionManager tx) {
         super("joupen");
         this.playerRepository = repo;
         this.transactionManager = tx;
-        this.playerMapper = Mappers.getMapper(PlayerMapper.class);
     }
 
     @Override
@@ -34,7 +30,6 @@ public class JoupenCommand extends AbstractCommand {
                         .label(label)
                         .argsTail(args)
                         .playerRepository(playerRepository)
-                        .playerMapper(playerMapper)
                         .transactionManager(transactionManager)
                         .build()
         );

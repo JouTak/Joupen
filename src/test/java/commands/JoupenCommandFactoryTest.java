@@ -8,12 +8,10 @@ import org.joupen.commands.GameCommand;
 import org.joupen.commands.JoupenCommandFactory;
 import org.joupen.events.SendPrivateMessageEvent;
 import org.joupen.events.publishers.SimpleEventBus;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.EventUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,14 +23,12 @@ import static org.mockito.Mockito.when;
 public class JoupenCommandFactoryTest {
 
     private PlayerRepository repo;
-    private PlayerMapper mapper;
     private SimpleEventBus bus;
     private List<String> inbox;
 
     @BeforeEach
     void setUp() {
         repo = mock(PlayerRepository.class);
-        mapper = Mappers.getMapper(PlayerMapper.class);
         bus = new SimpleEventBus();
         inbox = new ArrayList<>();
         EventUtils.register(SendPrivateMessageEvent.class, evt -> {
@@ -47,7 +43,6 @@ public class JoupenCommandFactoryTest {
                 .label(label)
                 .argsTail(args)
                 .playerRepository(repo)
-                .playerMapper(mapper)
                 .transactionManager(null)
                 .build();
     }
@@ -57,7 +52,7 @@ public class JoupenCommandFactoryTest {
         CommandSender sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Tester");
 
-        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "joupen"));
+        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "plugins/joupen"));
         assertNotNull(cmd);
         assertDoesNotThrow(cmd::execute);
     }
@@ -67,7 +62,7 @@ public class JoupenCommandFactoryTest {
         CommandSender sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Tester");
 
-        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "joupen", "abracadabra"));
+        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "plugins/joupen", "abracadabra"));
         cmd.execute();
 
         assertFalse(inbox.isEmpty());
@@ -80,7 +75,7 @@ public class JoupenCommandFactoryTest {
         when(sender.getName()).thenReturn("Tester");
         when(sender.hasPermission("joupen.admin")).thenReturn(false);
 
-        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "joupen", "prolong"));
+        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "plugins/joupen", "prolong"));
         cmd.execute();
 
         assertEquals(2, inbox.size(), "ожидаем 2 сообщения: нет прав + usage");

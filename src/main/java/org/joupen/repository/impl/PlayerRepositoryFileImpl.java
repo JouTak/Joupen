@@ -3,10 +3,8 @@ package org.joupen.repository.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.JoupenProperties;
-import org.mapstruct.factory.Mappers;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,10 +17,8 @@ import static org.joupen.utils.Utils.mapper;
 
 @Slf4j
 public class PlayerRepositoryFileImpl implements PlayerRepository {
-    private final PlayerMapper playerMapper;
 
     public PlayerRepositoryFileImpl() {
-        this.playerMapper = Mappers.getMapper(PlayerMapper.class);
     }
 
     @Override
