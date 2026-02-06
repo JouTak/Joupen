@@ -15,4 +15,8 @@ public class EventUtils {
     public static <T extends Event> void register(Class<T> eventType, Consumer<T> listener) {
         eventBus.register(eventType, listener);
     }
+
+    public static void reset() {
+        eventBus.reset();
+    }
 }

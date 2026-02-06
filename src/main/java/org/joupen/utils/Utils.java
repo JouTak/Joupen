@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Slf4j
 public class Utils {
-    public static final ObjectMapper mapper;
+    private static final ObjectMapper mapper;
 
     static {
         mapper = new ObjectMapper();

@@ -3,6 +3,7 @@ package org.joupen.events.publishers;
 import org.joupen.events.Event;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -25,8 +26,12 @@ public class SimpleEventBus implements EventPublisher {
             throw new IllegalArgumentException("Only Event types are supported, got: " + event.getClass());
         }
 
-        List<Consumer<? extends Event>> typedListeners = listeners.get(event.getClass());
-        if (typedListeners != null) {
+        Class<?> eventClass = event.getClass();
+        for (Map.Entry<Class<? extends Event>, CopyOnWriteArrayList<Consumer<? extends Event>>> entry : listeners.entrySet()) {
+            if (!entry.getKey().isAssignableFrom(eventClass)) {
+                continue;
+            }
+            List<Consumer<? extends Event>> typedListeners = entry.getValue();
             for (Consumer<? extends Event> l : typedListeners) {
                 ((Consumer<Event>) l).accept((Event) event);
             }

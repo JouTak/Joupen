@@ -50,8 +50,7 @@ public class PlayerService {
         return entity;
     }
 
-    public PlayerEntity addAll(List<PlayerEntity> playerEntityList) {
+    public void addAll(List<PlayerEntity> playerEntityList) {
         playerEntityList.forEach(this::add);
-        return null;
     }
 }

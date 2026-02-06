@@ -26,6 +26,7 @@ public class PlayerServiceTest {
 
     @BeforeEach
     void setUp() {
+        EventUtils.reset();
         repo = mock(PlayerRepository.class);
         service = new PlayerService(repo);
     }

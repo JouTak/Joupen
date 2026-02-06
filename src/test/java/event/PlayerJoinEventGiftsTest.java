@@ -36,7 +36,7 @@ public class PlayerJoinEventGiftsTest extends BaseTest {
         repo = mock(PlayerRepository.class);
         handler = new PlayerJoinEventHandler(repo);
 
-        pluginsDir = Paths.get("plugins", "plugins/joupen");
+        pluginsDir = Paths.get("plugins", "joupen");
         Files.createDirectories(pluginsDir);
         giftsFile = pluginsDir.resolve("gifts.txt");
         Files.deleteIfExists(giftsFile);
@@ -84,6 +84,7 @@ public class PlayerJoinEventGiftsTest extends BaseTest {
         Files.writeString(giftsFile, "TestPlayer WRONG\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
         when(repo.findByUuid(player.getUniqueId())).thenReturn(Optional.empty());
+        when(repo.findByName(player.getName())).thenReturn(Optional.empty());
 
         PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1"));
 

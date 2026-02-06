@@ -7,7 +7,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TimeUtilsExtraTest {
+public class TimeUtilsTest {
 
     @Test
     void parseDuration_mo_d_h_m_combo() {

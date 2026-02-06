@@ -239,8 +239,32 @@
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
                     <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
+            </plugin>
+
+            <!-- Failsafe (Integration Tests) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Shade -->
@@ -256,6 +280,14 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.junit.jupiter:*</exclude>
+                                    <exclude>org.mockito:*</exclude>
+                                    <exclude>com.github.seeseemelk:MockBukkit-v1.20</exclude>
+                                    <exclude>org.testcontainers:*</exclude>
+                                </excludes>
+                            </artifactSet>
                             <filters>
                                 <!-- Оставляем только runtime-библиотеки -->
                                 <filter>

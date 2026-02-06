@@ -6,10 +6,10 @@ import org.bukkit.command.CommandSender;
 import org.joupen.commands.BuildContext;
 import org.joupen.commands.GameCommand;
 import org.joupen.commands.JoupenCommandFactory;
-import org.joupen.events.SendPrivateMessageEvent;
-import org.joupen.events.publishers.SimpleEventBus;
+import org.joupen.messaging.Messaging;
+import org.joupen.messaging.Recipient;
+import org.joupen.messaging.channels.MessageChannel;
 import org.joupen.repository.PlayerRepository;
-import org.joupen.utils.EventUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,17 +23,31 @@ import static org.mockito.Mockito.when;
 public class JoupenCommandFactoryTest {
 
     private PlayerRepository repo;
-    private SimpleEventBus bus;
     private List<String> inbox;
 
     @BeforeEach
     void setUp() {
         repo = mock(PlayerRepository.class);
-        bus = new SimpleEventBus();
         inbox = new ArrayList<>();
-        EventUtils.register(SendPrivateMessageEvent.class, evt -> {
-            Component c = evt.message();
-            inbox.add(PlainTextComponentSerializer.plainText().serialize(c));
+
+        try {
+            var m = Messaging.class.getDeclaredMethod("resetForTests");
+            m.setAccessible(true);
+            m.invoke(null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        Messaging.registerChannel(new MessageChannel() {
+            @Override
+            public String id() {
+                return "chat";
+            }
+
+            @Override
+            public void send(Recipient recipient, Component message) {
+                inbox.add(PlainTextComponentSerializer.plainText().serialize(message));
+            }
         });
     }
 

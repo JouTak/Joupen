@@ -13,14 +13,34 @@ public abstract class BaseTest {
     protected PlayerMock player;
 
     protected static final String TEST_NAME = "TestPlayer";
-    protected static final String TEST_FILE_PATH = "src/test/resources/player.json";
 
     @BeforeEach
     void setupMockBukkit() {
         server = MockBukkit.mock();
         player = server.addPlayer();
         player.setName(TEST_NAME);
-        JoupenProperties.playersFilepath = TEST_FILE_PATH;
+        
+        // Создаём временный файл с тестовыми данными
+        try {
+            java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test-player", ".json");
+            String testPlayerJson = "{\n" +
+                    "  \"playerDtoList\": [\n" +
+                    "    {\n" +
+                    "      \"id\": null,\n" +
+                    "      \"name\": \"" + TEST_NAME + "\",\n" +
+                    "      \"uuid\": \"994f326b-cfb5-4502-ce62-8eaddafd622d\",\n" +
+                    "      \"lastProlongDate\": \"2025-02-28\",\n" +
+                    "      \"validUntil\": \"2025-03-30\",\n" +
+                    "      \"paid\": true\n" +
+                    "    }\n" +
+                    "  ]\n" +
+                    "}";
+            java.nio.file.Files.writeString(tempFile, testPlayerJson);
+            JoupenProperties.playersFilepath = tempFile.toString();
+            tempFile.toFile().deleteOnExit(); // Удаляется автоматически
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create temp test file", e);
+        }
     }
 
     @AfterEach

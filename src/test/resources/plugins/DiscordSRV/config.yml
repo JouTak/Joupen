@@ -1,9 +1,0 @@
-BotToken: "fake-token"
-Debug: true
-Channels: { }
-MinecraftToDiscord:
-  ChatMessageEnabled: true
-DiscordToMinecraft:
-  ChatMessageEnabled: false
-ConsoleChannelId: ""
-ChatChannelId: ""

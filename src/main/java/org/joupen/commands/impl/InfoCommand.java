@@ -31,7 +31,8 @@ public class InfoCommand implements GameCommand {
             return;
         }
 
-        PlayerDto dto = mapper.entityToDto(optional.get());
+        PlayerEntity entity = optional.get();
+        PlayerDto dto = mapper.entityToDto(entity);
         TextComponent textComponent = Component.text()
                 .append(Component.text("Ник: ", NamedTextColor.GREEN))
                 .append(Component.text(dto.getName(), NamedTextColor.BLUE)).appendNewline()

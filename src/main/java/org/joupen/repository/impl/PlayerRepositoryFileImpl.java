@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.JoupenProperties;
+import org.joupen.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.joupen.utils.Utils.mapper;
 
 @Slf4j
 public class PlayerRepositoryFileImpl implements PlayerRepository {
@@ -104,7 +104,10 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
         try {
             File jsonFile = new File(JoupenProperties.playersFilepath);
             log.info("Reading from file: {}", jsonFile.getAbsolutePath());
-            return mapper.readValue(jsonFile, new TypeReference<>() {
+
+            String fileContent = java.nio.file.Files.readString(jsonFile.toPath());
+
+            return Utils.fromJson(fileContent, new TypeReference<>() {
             });
         } catch (IOException e) {
             log.error("Error reading players file", e);
@@ -115,7 +118,7 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
     private void writePlayerDtos(List<PlayerEntity> players) {
         try {
             File jsonFile = new File(JoupenProperties.playersFilepath);
-            mapper.writeValue(jsonFile, players);
+            java.nio.file.Files.writeString(jsonFile.toPath(), Utils.toJson(players));
         } catch (IOException e) {
             log.error("Error writing players file", e);
         }

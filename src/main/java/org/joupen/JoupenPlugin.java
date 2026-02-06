@@ -9,9 +9,8 @@ import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
 import org.joupen.events.PlayerJoinEventHandler;
 import org.joupen.events.PlayerProlongedEvent;
-import org.joupen.events.SendPrivateMessageEvent;
 import org.joupen.events.listeners.PlayerProlongedBroadcastListener;
-import org.joupen.events.listeners.PrivateMessageListener;
+import org.joupen.messaging.Messaging;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.repository.PlayerRepositoryFactory;
 import org.joupen.service.MigrationService;
@@ -60,11 +59,12 @@ public class JoupenPlugin extends JavaPlugin {
             new MigrationService(playerRepository).migrate();
         }
 
+        Messaging.initialize();
+
         new JoupenCommand(playerRepository, transactionManager);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
 
         EventUtils.register(PlayerProlongedEvent.class, new PlayerProlongedBroadcastListener());
-        EventUtils.register(SendPrivateMessageEvent.class, new PrivateMessageListener());
 
         log.info("JoupenPlugin enabled successfully!");
     }

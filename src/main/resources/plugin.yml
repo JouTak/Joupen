@@ -1,0 +1,20 @@
+name: JoupenPlugin
+version: 2.1.0
+main: org.joupen.JoupenPlugin
+api-version: 1.20
+author: JouTak
+description: Login plugin for JouTak server
+
+commands:
+  joupen:
+    description: Main Joupen command
+    usage: /<command> [subcommand] [args...]
+    permission: joupen.use
+
+permissions:
+  joupen.admin:
+    description: Admin access to all Joupen commands
+    default: op
+  joupen.use:
+    description: Basic access to Joupen commands
+    default: true
