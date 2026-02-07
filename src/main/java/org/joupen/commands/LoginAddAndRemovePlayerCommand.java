@@ -65,13 +65,13 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         }
     }
 
-    private boolean checkPermission(CommandSender commandSender, String permission) {
-        if (!commandSender.hasPermission(permission)) {
+    private boolean checkPermission(CommandSender commandSender) {
+        if (!commandSender.hasPermission("joupen.admin")) {
             commandSender.sendMessage(Component.text("Go walk around. You don't have permission", NamedTextColor.RED));
-            log.warn("Permission {} denied for {}", permission, commandSender.getName());
+            log.warn("Permission {} denied for {}", "joupen.admin", commandSender.getName());
             return true;
         }
-        log.info("Permission {} granted for {}", permission, commandSender.getName());
+        log.info("Permission {} granted for {}", "joupen.admin", commandSender.getName());
         return false;
     }
 
@@ -112,7 +112,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
     private void infoCommand(CommandSender commandSender, String[] args) {
         log.info("Executing /joupen info with args: {} by {}", Arrays.toString(args), commandSender);
-        String playerName = (args.length > 1 && !checkPermission(commandSender, "joupen.admin")) ? args[1] : commandSender.getName();
+        String playerName = (args.length > 1 && !checkPermission(commandSender)) ? args[1] : commandSender.getName();
 
         Optional<PlayerEntity> optionalEntity = playerRepository.findByName(playerName);
         if (optionalEntity.isEmpty()) {
@@ -147,7 +147,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
 
     private void prolongCommand(CommandSender commandSender, String[] args, boolean gift) {
         log.info("Executing /joupen prolong with args: {}, gift: {}", Arrays.toString(args), gift);
-        if (checkPermission(commandSender, "joupen.admin")) {
+        if (checkPermission(commandSender)) {
             log.warn("Prolong command aborted: {} lacks joupen.admin permission", commandSender.getName());
             return;
         }
@@ -225,10 +225,14 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                     TextComponent textComponent = Component.text()
                             .append(Component.text("Новый игрок ", NamedTextColor.AQUA))
                             .append(Component.text(args[1], NamedTextColor.YELLOW))
-                            .append(Component.text(" впервые оплатил проходку! Ура!", NamedTextColor.AQUA))
+                            .append(Component.text(
+                                    gift ? " получил проходку в подарок!" : " впервые оплатил проходку!",
+                                    NamedTextColor.AQUA))
                             .build();
                     Bukkit.getServer().sendMessage(textComponent);
-                    commandSender.sendMessage(Component.text("Added new player to the whitelist: " + args[1], NamedTextColor.RED));
+                    commandSender.sendMessage(Component.text(
+                            gift?"Added new player to the whitelist as he received a subscription as a gift: "
+                                    :"Added new player to the whitelist as he payed for a subscription: " + args[1], NamedTextColor.RED));
                     log.info("Saved new player to whitelist: {}", args[1]);
                 } catch (Exception e) {
                     log.error("Failed to save new player {}: {}", args[1], e.getMessage());
@@ -239,7 +243,9 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
                     TextComponent textComponent = Component.text()
                             .append(Component.text("Игрок ", NamedTextColor.AQUA))
                             .append(Component.text(args[1], NamedTextColor.YELLOW))
-                            .append(Component.text(" продлил проходку на еще ", NamedTextColor.AQUA))
+                            .append(Component.text(
+                                    gift ? " получил подарок на " : " продлил проходку на ",
+                                    NamedTextColor.AQUA))
                             .append(Component.text(formatDuration(duration), NamedTextColor.AQUA))
                             .append(Component.text(". Ура!", NamedTextColor.AQUA))
                             .build();
@@ -268,7 +274,7 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
     }
 
     private void addCommand(CommandSender sender, String[] args) {
-        if (checkPermission(sender, "joupen.admin")) {
+        if (checkPermission(sender)) {
             return;
         }
 
