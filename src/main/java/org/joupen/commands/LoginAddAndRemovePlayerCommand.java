@@ -127,12 +127,20 @@ public class LoginAddAndRemovePlayerCommand extends AbstractCommand {
         }
 
         PlayerDto playerDto = playerMapper.entityToDto(optionalEntity.get());
+
+        Component nameComponent = Component.text(playerDto.getName(), NamedTextColor.BLUE)
+                .clickEvent(ClickEvent.copyToClipboard(playerDto.getName()))
+                .hoverEvent(Component.text("Нажми, чтобы скопировать ник", NamedTextColor.GRAY));
+
+        Component uuidComponent = Component.text(playerDto.getUuid().toString(), NamedTextColor.BLUE)
+                .clickEvent(ClickEvent.copyToClipboard(playerDto.getUuid().toString()))
+                .hoverEvent(Component.text("Нажми, чтобы скопировать UUID", NamedTextColor.GRAY));
         TextComponent textComponent = Component.text()
                 .append(Component.text(args.length > 1 ? "Ник Игрока:" : "Твой Ник:", NamedTextColor.GREEN))
-                .append(Component.text(playerDto.getName(), NamedTextColor.BLUE))
+                .append(nameComponent)
                 .appendNewline()
                 .append(Component.text(args.length > 1 ? "UUID Игрока:" : "Твой UUID:", NamedTextColor.GREEN))
-                .append(Component.text(playerDto.getUuid().toString(), NamedTextColor.BLUE))
+                .append(uuidComponent)
                 .appendNewline()
                 .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
                 .append(Component.text(playerDto.getLastProlongDate().toString(), NamedTextColor.BLUE))
