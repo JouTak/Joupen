@@ -2,6 +2,7 @@ package org.joupen.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
@@ -11,7 +12,8 @@ import org.jooq.impl.DSL;
 import org.joupen.utils.JoupenProperties;
 
 @Slf4j
-public class DatabaseManager {
+@Getter
+public class DatabaseManager implements AutoCloseable {
     private final HikariDataSource dataSource;
     private final DSLContext dslContext;
 
@@ -24,12 +26,8 @@ public class DatabaseManager {
         config.setMaximumPoolSize(10);
         this.dataSource = new HikariDataSource(config);
         var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
-        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB,settings);
+        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB, settings);
         log.info("DatabaseManager initialized with jOOQ for MariaDB");
-    }
-
-    public DSLContext getDslContext() {
-        return dslContext;
     }
 
     public void close() {

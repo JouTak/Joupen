@@ -179,7 +179,12 @@
             <version>1.20.1</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>ru.joutak</groupId>
+            <artifactId>minigamesapi</artifactId>
+            <version>1.0.0</version>
+            <classifier>all</classifier>
+        </dependency>
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -234,8 +239,32 @@
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
                     <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
+            </plugin>
+
+            <!-- Failsafe (Integration Tests) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Shade -->
@@ -251,11 +280,82 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.junit.jupiter:*</exclude>
+                                    <exclude>org.mockito:*</exclude>
+                                    <exclude>com.github.seeseemelk:MockBukkit-v1.20</exclude>
+                                    <exclude>org.testcontainers:*</exclude>
+                                </excludes>
+                            </artifactSet>
                             <filters>
+                                <!-- Оставляем только runtime-библиотеки -->
                                 <filter>
-                                    <artifact>*:*</artifact>
+                                    <artifact>com.zaxxer:HikariCP</artifact>
                                     <includes>
                                         <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.mariadb.jdbc:mariadb-java-client</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.jooq:jooq</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.core:jackson-databind</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.yaml:snakeyaml</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+
+                                <!-- Явно исключаем dev/test зависимости -->
+                                <filter>
+                                    <artifact>org.projectlombok:*</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.mapstruct:*</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.liquibase:liquibase-core</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.github.seeseemelk:MockBukkit-v1.20</artifact>
+                                    <includes>
+                                        <include>nothing</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.testcontainers:*</artifact>
+                                    <includes>
+                                        <include>nothing</include>
                                     </includes>
                                 </filter>
                             </filters>
@@ -270,6 +370,7 @@
                     </execution>
                 </executions>
             </plugin>
+
 
             <!-- Resources -->
             <plugin>
@@ -502,6 +603,10 @@
     </profiles>
 
     <repositories>
+        <repository>
+            <id>temp</id>
+            <url>https://maven.joutak.ru/releases/</url>
+        </repository>
         <repository>
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>

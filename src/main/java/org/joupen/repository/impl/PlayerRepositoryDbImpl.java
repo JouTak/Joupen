@@ -3,11 +3,8 @@ package org.joupen.repository.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.database.TransactionManager;
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 import org.joupen.jooq.generated.tables.Players;
-import org.joupen.mapper.PlayerMapper;
 import org.joupen.repository.PlayerRepository;
-import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,11 +12,9 @@ import java.util.UUID;
 
 @Slf4j
 public class PlayerRepositoryDbImpl implements PlayerRepository {
-    private final PlayerMapper playerMapper;
     private final TransactionManager transactionManager;
 
     public PlayerRepositoryDbImpl(TransactionManager transactionManager) {
-        this.playerMapper = Mappers.getMapper(PlayerMapper.class);
         this.transactionManager = transactionManager;
     }
 
@@ -42,9 +37,8 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     }
 
     @Override
-    public void save(PlayerDto playerDto) {
+    public void save(PlayerEntity entity) {
         transactionManager.executeInTransaction(txDsl -> {
-            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             txDsl.insertInto(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, entity.getUuid().toString())
                     .set(Players.PLAYERS.NAME, entity.getName())
@@ -69,9 +63,8 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     }
 
     @Override
-    public void updateByName(PlayerDto playerDto, String name) {
+    public void updateByName(PlayerEntity entity, String name) {
         transactionManager.executeInTransaction(txDsl -> {
-            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             int rowsAffected = txDsl.update(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, entity.getUuid().toString())
                     .set(Players.PLAYERS.NAME, entity.getName())
@@ -89,9 +82,8 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
     }
 
     @Override
-    public void updateByUuid(PlayerDto playerDto, UUID uuid) {
+    public void updateByUuid(PlayerEntity entity, UUID uuid) {
         transactionManager.executeInTransaction(txDsl -> {
-            PlayerEntity entity = playerMapper.dtoToEntity(playerDto);
             int rowsAffected = txDsl.update(Players.PLAYERS)
                     .set(Players.PLAYERS.UUID, entity.getUuid().toString())
                     .set(Players.PLAYERS.NAME, entity.getName())
