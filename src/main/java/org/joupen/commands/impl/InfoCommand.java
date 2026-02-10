@@ -33,15 +33,25 @@ public class InfoCommand implements GameCommand {
 
         PlayerEntity entity = optional.get();
         PlayerDto dto = mapper.entityToDto(entity);
+       Component nameComponent = Component.text(playerDto.getName(), NamedTextColor.BLUE)
+                .clickEvent(ClickEvent.copyToClipboard(playerDto.getName()))
+                .hoverEvent(Component.text("Нажми, чтобы скопировать ник", NamedTextColor.GRAY));
+
+        Component uuidComponent = Component.text(playerDto.getUuid().toString(), NamedTextColor.BLUE)
+                .clickEvent(ClickEvent.copyToClipboard(playerDto.getUuid().toString()))
+                .hoverEvent(Component.text("Нажми, чтобы скопировать UUID", NamedTextColor.GRAY));
         TextComponent textComponent = Component.text()
-                .append(Component.text("Ник: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getName(), NamedTextColor.BLUE)).appendNewline()
-                .append(Component.text("UUID: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getUuid().toString(), NamedTextColor.BLUE)).appendNewline()
-                .append(Component.text("Последняя дата продления: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getLastProlongDate().toString(), NamedTextColor.BLUE)).appendNewline()
-                .append(Component.text("Активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getValidUntil().toString(), NamedTextColor.BLUE))
+                .append(Component.text(args.length > 1 ? "Ник Игрока:" : "Твой Ник:", NamedTextColor.GREEN))
+                .append(nameComponent)
+                .appendNewline()
+                .append(Component.text(args.length > 1 ? "UUID Игрока:" : "Твой UUID:", NamedTextColor.GREEN))
+                .append(uuidComponent)
+                .appendNewline()
+                .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
+                .append(Component.text(playerDto.getLastProlongDate().toString(), NamedTextColor.BLUE))
+                .appendNewline()
+                .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
+                .append(Component.text(playerDto.getValidUntil().toString(), NamedTextColor.BLUE))
                 .build();
 
         sender.sendMessage(textComponent);
