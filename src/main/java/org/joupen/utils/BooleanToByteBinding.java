@@ -1,6 +1,7 @@
 package org.joupen.utils;
 
 import org.jooq.*;
+import org.jooq.impl.DSL;
 
 import java.sql.SQLException;
 
@@ -35,7 +36,7 @@ public class BooleanToByteBinding implements Binding<Byte, Boolean> {
 
     @Override
     public void sql(BindingSQLContext<Boolean> bindingSQLContext) throws SQLException {
-
+        bindingSQLContext.render().sql("?");
     }
 
     @Override

@@ -37,7 +37,7 @@ public class JoupenCommandFactory {
             case "help" -> new HelpCommand(ctx.getSender());
             case "link" -> new LinkCommand(ctx.getSender());
             case "info" ->
-                    new InfoCommand(ctx.getSender(), ctx.getPlayerRepository(), mapper, tail.length == 0 ? ctx.getSender().getName() : tail[0]);
+                    new InfoCommand(ctx.getSender(), ctx.getPlayerRepository(), mapper, tail.length == 0 ? ctx.getSender().getName() : tail[0], tail.length == 0);
             case "prolong" ->
                     new ProlongCommand(ps, tail.length > 0 ? tail[0] : "", tail.length >= 2 ? tail[1] : "", Duration.ofDays(30), false);
             case "gift" ->

@@ -134,22 +134,24 @@ public class PlayerJoinEventHandler implements Listener {
                         continue;
                     }
 
-                    LocalDateTime newValidUntil = LocalDateTime.now().plus(duration);
+                    LocalDateTime now = LocalDateTime.now();
                     Optional<PlayerEntity> optionalEntity = playerRepository.findByName(nick);
 
                     PlayerEntity entity;
                     if (optionalEntity.isPresent()) {
                         entity = optionalEntity.get();
-                        entity.setValidUntil(newValidUntil);
-                        entity.setLastProlongDate(LocalDateTime.now());
+                        LocalDateTime base = entity.getValidUntil().isBefore(now) ? now : entity.getValidUntil();
+                        entity.setValidUntil(base.plus(duration));
+                        entity.setLastProlongDate(now);
                         entity.setUuid(player.getUniqueId());
                         playerRepository.updateByName(entity, nick);
                     } else {
                         entity = new PlayerEntity();
                         entity.setName(nick);
                         entity.setUuid(player.getUniqueId());
-                        entity.setValidUntil(newValidUntil);
-                        entity.setLastProlongDate(LocalDateTime.now());
+                        entity.setValidUntil(now.plus(duration));
+                        entity.setLastProlongDate(now);
+                        entity.setPaid(false);
                         playerRepository.save(entity);
                     }
 

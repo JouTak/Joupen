@@ -44,7 +44,7 @@ public class MigrationService {
                     log.info("Saved new player to database: {}", playerInFile.getName());
                 }
             } catch (Exception e) {
-                log.info("Failed to migrate player {} to database: {}", playerInFile.getName(), e.getMessage());
+                log.error("Failed to migrate player {} to database: {}", playerInFile.getName(), e.getMessage(), e);
             }
         }
         log.info("Migration from file to database completed.");
