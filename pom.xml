@@ -486,7 +486,7 @@
                                         <forcedType>
                                             <priority>0</priority>
                                             <userType>java.lang.Boolean</userType>
-                                            <binding>org.jooq.impl.BooleanToByteBinding</binding>
+                                            <binding>org.joupen.utils.BooleanToByteBinding</binding>
                                             <includeExpression>PAID</includeExpression>
                                             <includeTypes>(?i:TINYINT|BOOLEAN|BOOL|BIT|SMALLINT)</includeTypes>
                                             <nullability>ALL</nullability>
