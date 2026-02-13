@@ -488,7 +488,7 @@
                                             <userType>java.lang.Boolean</userType>
                                             <binding>org.jooq.impl.BooleanToByteBinding</binding>
                                             <includeExpression>PAID</includeExpression>
-                                            <includeTypes>TINYINT</includeTypes>
+                                            <includeTypes>(?i:TINYINT|BOOLEAN|BOOL|BIT|SMALLINT)</includeTypes>
                                             <nullability>ALL</nullability>
                                             <objectType>ALL</objectType>
                                         </forcedType>
@@ -519,11 +519,6 @@
                         <groupId>org.liquibase</groupId>
                         <artifactId>liquibase-core</artifactId>
                         <version>${liquibase.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.mariadb.jdbc</groupId>
-                        <artifactId>mariadb-java-client</artifactId>
-                        <version>${mariadb.version}</version>
                     </dependency>
                 </dependencies>
             </plugin>
