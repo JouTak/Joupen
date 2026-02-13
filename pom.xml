@@ -250,10 +250,8 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
+                        <include>**/*IT.java</include>
                     </includes>
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                    </excludes>
                     <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
             </plugin>
