@@ -3,10 +3,10 @@ package org.joupen.commands.impl;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import org.joupen.commands.BuildContext;
-import org.joupen.validation.CommandValidator;
 import org.joupen.commands.GameCommand;
 import org.joupen.service.PlayerService;
 import org.joupen.utils.TimeUtils;
+import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
 
 import java.time.Duration;

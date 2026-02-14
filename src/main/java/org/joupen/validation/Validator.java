@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Упрощённый валидатор команд с автоматической генерацией usage.
- * 
+ * <p>
  * Пример:
  * <pre>
  * Validator.of(ctx)

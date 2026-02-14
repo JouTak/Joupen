@@ -1,6 +1,5 @@
 package org.joupen.commands.impl;
 
-import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -8,10 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.joupen.commands.GameCommand;
 
-@RequiredArgsConstructor
-public class LinkCommand implements GameCommand {
-    private final CommandSender sender;
-
+public record LinkCommand(CommandSender sender) implements GameCommand {
     @Override
     public void execute() {
         TextComponent textComponent = Component.text()

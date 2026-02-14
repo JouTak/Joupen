@@ -19,5 +19,5 @@ public interface PlayerRepository {
 
     void delete(UUID uuid);
 
-    public void updateByName(PlayerEntity playerDto, String name);
+    void updateByName(PlayerEntity playerDto, String name);
 }

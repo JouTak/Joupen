@@ -5,12 +5,12 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.joupen.commands.BuildContext;
-import org.joupen.validation.CommandValidator;
 import org.joupen.commands.GameCommand;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.messaging.Messaging;
 import org.joupen.service.PlayerImportService;
 import org.joupen.service.PlayerService;
+import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
 
 import java.nio.file.Path;
