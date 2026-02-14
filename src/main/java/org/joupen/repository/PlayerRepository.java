@@ -1,7 +1,6 @@
 package org.joupen.repository;
 
 import org.joupen.domain.PlayerEntity;
-import org.joupen.dto.PlayerDto;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,13 +11,13 @@ public interface PlayerRepository {
 
     Optional<PlayerEntity> findByName(String name);
 
-    void save(PlayerDto playerDto);
+    void save(PlayerEntity playerDto);
 
     List<PlayerEntity> findAll();
 
-    void updateByUuid(PlayerDto playerDto,UUID uuid);
+    void updateByUuid(PlayerEntity playerDto, UUID uuid);
 
     void delete(UUID uuid);
 
-    public void updateByName(PlayerDto playerDto, String name);
+    public void updateByName(PlayerEntity playerDto, String name);
 }

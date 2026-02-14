@@ -47,7 +47,6 @@ public abstract class BaseCrudMariaDBTest {
         );
         liquibase.update("");
 
-        // Настройка HikariCP и jOOQ
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(mariaDB.getJdbcUrl());
         config.setUsername(mariaDB.getUsername());

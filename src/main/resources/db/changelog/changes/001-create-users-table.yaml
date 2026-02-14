@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 001
-      author:   joutak
+      author: joutak
       changes:
         - createTable:
             tableName: players

@@ -67,8 +67,8 @@ public class DateTimeTest {
         assertEquals(2L, dto.getId(), "ID should be 2");
         assertEquals("Player2", dto.getName(), "Name should be Player2");
         assertEquals(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"), dto.getUuid(), "UUID should match");
-        assertEquals(LocalDateTime.of(2024, 12, 31, 0, 0,0), dto.getLastProlongDate(), "lastProlongDate should be 2024-12-31 00:00:00");
-        assertEquals(LocalDateTime.of(2025, 6, 30, 0, 0,0), dto.getValidUntil(), "validUntil should be 2025-06-30 00:00:00");
+        assertEquals(LocalDateTime.of(2024, 12, 31, 0, 0, 0), dto.getLastProlongDate(), "lastProlongDate should be 2024-12-31 00:00:00");
+        assertEquals(LocalDateTime.of(2025, 6, 30, 0, 0, 0), dto.getValidUntil(), "validUntil should be 2025-06-30 00:00:00");
         assertFalse(dto.getPaid(), "isPaid should be false");
     }
 }
