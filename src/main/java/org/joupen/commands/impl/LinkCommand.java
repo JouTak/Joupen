@@ -5,9 +5,18 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
+import org.joupen.commands.BuildContext;
+import org.joupen.commands.CommandAlias;
 import org.joupen.commands.GameCommand;
 
-public record LinkCommand(CommandSender sender) implements GameCommand {
+@CommandAlias(name = "link")
+public class LinkCommand implements GameCommand {
+    private final CommandSender sender;
+
+    public LinkCommand(BuildContext buildContext) {
+        this.sender = buildContext.getSender();
+    }
+
     @Override
     public void execute() {
         TextComponent textComponent = Component.text()

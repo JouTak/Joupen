@@ -1,6 +1,5 @@
 package org.joupen.commands.impl;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -8,6 +7,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.joupen.commands.BuildContext;
+import org.joupen.commands.CommandAlias;
 import org.joupen.commands.GameCommand;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
@@ -16,18 +16,30 @@ import org.joupen.messaging.Messaging;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
+import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-@RequiredArgsConstructor
+@CommandAlias(name = "info", maxArgs = 1)
 public class InfoCommand implements GameCommand, CommandValidator {
     private final CommandSender sender;
     private final PlayerRepository repo;
     private final PlayerMapper mapper;
     private final String targetName;
     private final boolean self;
+
+    public InfoCommand(BuildContext buildContext) {
+        this.sender = buildContext.getSender();
+        this.repo = buildContext.getPlayerRepository();
+        this.mapper = buildContext.getPlayerMapper() != null
+                ? buildContext.getPlayerMapper()
+                : Mappers.getMapper(PlayerMapper.class);
+        String[] args = buildContext.getArgs();
+        this.targetName = args.length == 0 ? buildContext.getSender().getName() : args[0];
+        this.self = args.length == 0;
+    }
 
     @Override
     public List<Component> validate(BuildContext ctx, String[] args) {

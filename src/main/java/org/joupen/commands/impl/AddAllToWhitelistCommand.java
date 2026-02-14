@@ -1,42 +1,45 @@
 package org.joupen.commands.impl;
 
-import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.joupen.commands.BuildContext;
+import org.joupen.commands.CommandAlias;
 import org.joupen.commands.GameCommand;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.messaging.Messaging;
 import org.joupen.service.PlayerImportService;
 import org.joupen.service.PlayerService;
-import org.joupen.validation.CommandValidator;
-import org.joupen.validation.Validator;
 
 import java.nio.file.Path;
 import java.util.List;
 
-@RequiredArgsConstructor
-public class AddAllToWhitelistCommand implements GameCommand, CommandValidator {
+@CommandAlias(
+        name = "addalltowhitelist",
+        minArgs = 2,
+        maxArgs = 2,
+        usage = "/joupen addAllToWhitelist <filePath> <days>",
+        permission = "joupen.admin"
+)
+public class AddAllToWhitelistCommand implements GameCommand {
     private final CommandSender sender;
     private final PlayerImportService importService;
     private final PlayerService playerService;
     private final String filePathRaw;
     private final String daysRaw;
 
-    @Override
-    public List<Component> validate(BuildContext ctx, String[] args) {
-        return Validator.of(ctx, args)
-                .permission("joupen.admin")
-                .usage("/joupen addAllToWhitelist <filePath> <days>")
-                .arg(0, "file path")
-                .intArg(1, "days")
-                .check();
+    public AddAllToWhitelistCommand(BuildContext buildContext) {
+        this.sender = buildContext.getSender();
+        this.importService = new PlayerImportService(buildContext.getPlayerRepository());
+        this.playerService = buildContext.getPlayerService();
+        String[] args = buildContext.getArgs();
+        this.filePathRaw = args[0];
+        this.daysRaw = args[1];
     }
 
     @Override
     public void execute() {
-        int days = Integer.parseInt(daysRaw); // Already validated
+        int days = Integer.parseInt(daysRaw);
 
         Path path = Path.of(filePathRaw);
         if (!path.isAbsolute()) {

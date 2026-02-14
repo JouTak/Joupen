@@ -10,6 +10,7 @@ import org.joupen.messaging.Messaging;
 import org.joupen.messaging.Recipient;
 import org.joupen.messaging.channels.MessageChannel;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.service.PlayerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,11 +24,13 @@ import static org.mockito.Mockito.when;
 public class JoupenCommandFactoryTest {
 
     private PlayerRepository repo;
+    private PlayerService playerService;
     private List<String> inbox;
 
     @BeforeEach
     void setUp() {
         repo = mock(PlayerRepository.class);
+        playerService = mock(PlayerService.class);
         inbox = new ArrayList<>();
 
         try {
@@ -55,8 +58,9 @@ public class JoupenCommandFactoryTest {
         return BuildContext.builder()
                 .sender(sender)
                 .label(label)
-                .argsTail(args)
+                .commandArgsWithName(args)
                 .playerRepository(repo)
+                .playerService(playerService)
                 .transactionManager(null)
                 .build();
     }
@@ -84,16 +88,28 @@ public class JoupenCommandFactoryTest {
     }
 
     @Test
-    void prolong_validate_shouldComplainWithoutPermissionAndArgs() {
+    void prolong_noPermission_shouldDeny() {
         CommandSender sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Tester");
         when(sender.hasPermission("joupen.admin")).thenReturn(false);
 
+        GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "plugins/joupen", "prolong", "SomePlayer"));
+        cmd.execute();
+
+        assertFalse(inbox.isEmpty());
+        assertTrue(inbox.get(0).toLowerCase().contains("permission"));
+    }
+
+    @Test
+    void prolong_noArgs_shouldShowUsage() {
+        CommandSender sender = mock(CommandSender.class);
+        when(sender.getName()).thenReturn("Tester");
+        when(sender.hasPermission("joupen.admin")).thenReturn(true);
+
         GameCommand cmd = new JoupenCommandFactory().build(ctx(sender, "plugins/joupen", "prolong"));
         cmd.execute();
 
-        assertEquals(2, inbox.size(), "ожидаем 2 сообщения: нет прав + usage");
-        assertTrue(inbox.get(0).toLowerCase().contains("don't have permission"));
-        assertTrue(inbox.get(1).toLowerCase().contains("usage"));
+        assertFalse(inbox.isEmpty());
+        assertTrue(inbox.get(0).toLowerCase().contains("usage"));
     }
 }

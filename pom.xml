@@ -23,6 +23,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.10.2</version>
+        </dependency>
         <!-- Paper API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
@@ -370,7 +375,8 @@
                                 </filter>
                             </filters>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>org.joupen.JoupenPlugin</Main-Class>
                                     </manifestEntries>
@@ -492,7 +498,7 @@
                                         </property>
                                     </properties>
                                     <includes>.*</includes>
-                                    
+
                                 </database>
                                 <generate>
                                     <javaTimeTypes>true</javaTimeTypes>

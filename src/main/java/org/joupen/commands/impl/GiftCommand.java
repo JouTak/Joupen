@@ -1,11 +1,17 @@
 package org.joupen.commands.impl;
 
-import org.joupen.service.PlayerService;
+import org.joupen.commands.BuildContext;
+import org.joupen.commands.CommandAlias;
 
-import java.time.Duration;
-
+@CommandAlias(
+        name = "gift",
+        minArgs = 1,
+        maxArgs = 2,
+        usage = "/joupen gift <player|all> [duration]",
+        permission = "joupen.admin"
+)
 public class GiftCommand extends ProlongCommand {
-    public GiftCommand(PlayerService service, String target, String durationRaw, Duration defaultDuration) {
-        super(service, target, durationRaw, defaultDuration, true);
+    public GiftCommand(BuildContext buildContext) {
+        super(buildContext, true);
     }
 }
