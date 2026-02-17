@@ -1,5 +1,5 @@
 # Joupen 
-whitelist  plugin for JouTak <ins>(joutak.ru-mc.ru)</ins>
+whitelist  plugin for JouTak <ins>(mc.joutak.ru)</ins>
 
 **Описание:**  
 Joupen — это плагин для управления вайтлистом на сервере Minecraft. Плагин позволяет:
