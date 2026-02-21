@@ -95,11 +95,11 @@ public class InfoCommand implements GameCommand, CommandValidator {
                 .append(Component.text(self ? "Твой UUID: " : "UUID Игрока: ", NamedTextColor.GREEN))
                 .append(uuidComponent)
                 .appendNewline()
-                .append(Component.text("Последняя дата продления: ", NamedTextColor.GREEN))
-                .append(Component.text(lastProlong.format(FMT), NamedTextColor.BLUE))
+                .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
+                .append(Component.text(lastProlong.format(FMT), NamedTextColor.DARK_GREEN))
                 .appendNewline()
                 .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(validUntilText, NamedTextColor.BLUE))
+                .append(Component.text(validUntilText, NamedTextColor.DARK_GREEN))
                 .build();
 
         Messaging.reply(sender, textComponent);

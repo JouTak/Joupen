@@ -21,8 +21,8 @@ public class LinkCommand implements GameCommand {
     public void execute() {
         TextComponent textComponent = Component.text()
                 .append(Component.text("Joupen", NamedTextColor.GOLD)).appendNewline()
-                .append(Component.text("Ссылка на оплату проходочки ДжоуТека:", NamedTextColor.BLUE)).appendNewline()
-                .append(Component.text("https://clck.ru/3EEMC9", NamedTextColor.BLUE))
+                .append(Component.text("Ссылка на оплату проходочки ДжоуТека:", NamedTextColor.DARK_GREEN)).appendNewline()
+                .append(Component.text("https://clck.ru/3EEMC9", NamedTextColor.DARK_GREEN))
                 .append(Component.text(" *КЛИК*", NamedTextColor.GOLD))
                 .clickEvent(ClickEvent.openUrl("https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b/"))
                 .build();
