@@ -1,10 +1,13 @@
 package service;
 
+import be.seeseemelk.mockbukkit.MockBukkit;
+import be.seeseemelk.mockbukkit.ServerMock;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.events.PlayerProlongedEvent;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.service.PlayerService;
 import org.joupen.utils.EventUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,14 +24,21 @@ import static org.mockito.Mockito.*;
 
 public class PlayerServiceTest {
 
+    private ServerMock server;
     private PlayerRepository repo;
     private PlayerService service;
 
     @BeforeEach
     void setUp() {
+        server = MockBukkit.mock();
         EventUtils.reset();
         repo = mock(PlayerRepository.class);
         service = new PlayerService(repo);
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockBukkit.unmock();
     }
 
     @Test
@@ -44,13 +54,72 @@ public class PlayerServiceTest {
         assertEquals("Neo", res.getName());
         assertNotNull(res.getValidUntil());
         assertTrue(res.getValidUntil().isAfter(before));
-        assertTrue(Boolean.TRUE.equals(res.getPaid())); // gift=false => paid=true в заготовке сущности
+        assertTrue(Boolean.TRUE.equals(res.getPaid()));
 
         verify(repo).save(any(PlayerEntity.class));
         assertEquals(1, events.get());
     }
 
-    // ... imports и setUp() без изменений
+    @Test
+    void prolongOne_shouldPublishEventWithCorrectData() {
+        LocalDateTime now = LocalDateTime.now();
+        PlayerEntity existing = new PlayerEntity(1L, UUID.randomUUID(), "TestPlayer", 
+                now.plusDays(10), now.minusDays(20), true);
+        
+        when(repo.findByName("TestPlayer")).thenReturn(Optional.of(existing));
+        doNothing().when(repo).updateByName(any(), anyString());
+
+        AtomicInteger eventCount = new AtomicInteger(0);
+        EventUtils.register(PlayerProlongedEvent.class, e -> {
+            eventCount.incrementAndGet();
+            assertEquals("TestPlayer", e.player().getName());
+            assertTrue(e.gift());
+            assertEquals(Duration.ofDays(30), e.duration());
+            assertNotNull(e.player().getValidUntil());
+        });
+
+        var result = service.prolongOne("TestPlayer", Duration.ofDays(30), true);
+
+        assertEquals(1, eventCount.get());
+        assertEquals("TestPlayer", result.getName());
+        assertTrue(result.getValidUntil().isAfter(now.plusDays(10)));
+        verify(repo).updateByName(any(PlayerEntity.class), eq("TestPlayer"));
+    }
+
+    @Test
+    void prolongOne_shouldExtendFromNowIfExpired() {
+        LocalDateTime now = LocalDateTime.now();
+        PlayerEntity expired = new PlayerEntity(1L, UUID.randomUUID(), "ExpiredPlayer",
+                now.minusDays(5), now.minusDays(30), true);
+
+        when(repo.findByName("ExpiredPlayer")).thenReturn(Optional.of(expired));
+        doNothing().when(repo).updateByName(any(), anyString());
+
+        var result = service.prolongOne("ExpiredPlayer", Duration.ofDays(10), false);
+
+        assertNotNull(result.getValidUntil());
+        assertTrue(result.getValidUntil().isAfter(now));
+        assertTrue(result.getValidUntil().isBefore(now.plusDays(11)));
+        verify(repo).updateByName(any(PlayerEntity.class), eq("ExpiredPlayer"));
+    }
+
+    @Test
+    void prolongOne_shouldExtendFromValidUntilIfActive() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime futureValidUntil = now.plusDays(15);
+        PlayerEntity active = new PlayerEntity(1L, UUID.randomUUID(), "ActivePlayer",
+                futureValidUntil, now.minusDays(10), true);
+
+        when(repo.findByName("ActivePlayer")).thenReturn(Optional.of(active));
+        doNothing().when(repo).updateByName(any(), anyString());
+
+        var result = service.prolongOne("ActivePlayer", Duration.ofDays(30), false);
+
+        assertNotNull(result.getValidUntil());
+        assertTrue(result.getValidUntil().isAfter(futureValidUntil));
+        assertTrue(result.getValidUntil().isBefore(futureValidUntil.plusDays(31)));
+        verify(repo).updateByName(any(PlayerEntity.class), eq("ActivePlayer"));
+    }
 
     @Test
     void prolongAll_shouldSkipUnpaid_ifNotGift() {
