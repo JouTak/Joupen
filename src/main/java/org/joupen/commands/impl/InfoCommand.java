@@ -65,10 +65,10 @@ public class InfoCommand implements GameCommand, CommandValidator {
                 .append(uuidComponent)
                 .appendNewline()
                 .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getLastProlongDate().toString(), NamedTextColor.BLUE))
+                .append(Component.text(dto.getLastProlongDate().toString(), NamedTextColor.DARK_GREEN))
                 .appendNewline()
                 .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getValidUntil().toString(), NamedTextColor.BLUE))
+                .append(Component.text(dto.getValidUntil().toString(), NamedTextColor.DARK_GREEN))
                 .build();
 
         Messaging.reply(sender, textComponent);
