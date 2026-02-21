@@ -18,12 +18,17 @@ import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
 import org.mapstruct.factory.Mappers;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @CommandAlias(name = "info", maxArgs = 1)
 public class InfoCommand implements GameCommand, CommandValidator {
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
     private final CommandSender sender;
     private final PlayerRepository repo;
     private final PlayerMapper mapper;
@@ -61,6 +66,7 @@ public class InfoCommand implements GameCommand, CommandValidator {
 
         PlayerEntity entity = optional.get();
         PlayerDto dto = mapper.entityToDto(entity);
+
         Component nameComponent = Component.text(dto.getName(), NamedTextColor.BLUE)
                 .clickEvent(ClickEvent.copyToClipboard(dto.getName()))
                 .hoverEvent(Component.text("Нажми, чтобы скопировать ник", NamedTextColor.GRAY));
@@ -69,6 +75,19 @@ public class InfoCommand implements GameCommand, CommandValidator {
                 .clickEvent(ClickEvent.copyToClipboard(dto.getUuid().toString()))
                 .hoverEvent(Component.text("Нажми, чтобы скопировать UUID", NamedTextColor.GRAY));
 
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime validUntil = dto.getValidUntil();
+        LocalDateTime lastProlong = dto.getLastProlongDate();
+
+        long daysRemaining = Math.max(0, ChronoUnit.DAYS.between(now, validUntil));
+        long totalDays = ChronoUnit.DAYS.between(lastProlong, validUntil);
+        int percent = totalDays > 0
+                ? (int) Math.round(100.0 * daysRemaining / totalDays)
+                : 0;
+
+        String validUntilText = validUntil.format(FMT)
+                + " (" + daysRemaining + " дн., " + percent + "%)";
+
         TextComponent textComponent = Component.text()
                 .append(Component.text(self ? "Твой Ник: " : "Ник Игрока: ", NamedTextColor.GREEN))
                 .append(nameComponent)
@@ -76,11 +95,11 @@ public class InfoCommand implements GameCommand, CommandValidator {
                 .append(Component.text(self ? "Твой UUID: " : "UUID Игрока: ", NamedTextColor.GREEN))
                 .append(uuidComponent)
                 .appendNewline()
-                .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getLastProlongDate().toString(), NamedTextColor.BLUE))
+                .append(Component.text("Последняя дата продления: ", NamedTextColor.GREEN))
+                .append(Component.text(lastProlong.format(FMT), NamedTextColor.BLUE))
                 .appendNewline()
                 .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getValidUntil().toString(), NamedTextColor.BLUE))
+                .append(Component.text(validUntilText, NamedTextColor.BLUE))
                 .build();
 
         Messaging.reply(sender, textComponent);

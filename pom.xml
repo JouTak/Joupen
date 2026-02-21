@@ -12,6 +12,8 @@
     <name>LoginPluginForJoutak</name>
 
     <properties>
+        <maven.build.timestamp.format>ddMMyy</maven.build.timestamp.format>
+        <build.inc>1</build.inc>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jooq.version>3.19.10</jooq.version>
@@ -116,11 +118,12 @@
             <version>2.17.2</version>
         </dependency>
 
-        <!-- SnakeYAML -->
+        <!-- SnakeYAML — provided, Paper уже содержит -->
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.2</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Tests -->
@@ -202,20 +205,17 @@
             <version>1.0.0</version>
             <classifier>all</classifier>
         </dependency>
-        <!-- Logging -->
+        <!-- Logging — provided, Paper уже содержит SLF4J -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>2.0.9</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <version>2.0.9</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
     <build>
+        <finalName>${project.artifactId}-${maven.build.timestamp}-${build.inc}</finalName>
         <plugins>
             <!-- Compiler -->
             <plugin>
@@ -295,83 +295,41 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <minimizeJar>true</minimizeJar>
                             <artifactSet>
                                 <excludes>
+                                    <!-- test / provided — не должны попасть -->
                                     <exclude>org.junit.jupiter:*</exclude>
                                     <exclude>org.mockito:*</exclude>
                                     <exclude>com.github.seeseemelk:MockBukkit-v1.20</exclude>
                                     <exclude>org.testcontainers:*</exclude>
+                                    <exclude>org.projectlombok:*</exclude>
+                                    <exclude>org.mapstruct:mapstruct-processor</exclude>
+                                    <exclude>org.liquibase:*</exclude>
+                                    <exclude>org.jooq:jooq-codegen</exclude>
+                                    <exclude>org.jooq:jooq-meta-extensions-liquibase</exclude>
+                                    <!-- Paper уже содержит -->
+                                    <exclude>org.slf4j:*</exclude>
+                                    <exclude>org.yaml:snakeyaml</exclude>
+                                    <!-- Не нужны в runtime -->
+                                    <exclude>io.r2dbc:*</exclude>
+                                    <exclude>org.reactivestreams:*</exclude>
+                                    <exclude>jakarta.xml.bind:*</exclude>
                                 </excludes>
                             </artifactSet>
                             <filters>
-                                <!-- Оставляем только runtime-библиотеки -->
                                 <filter>
-                                    <artifact>com.zaxxer:HikariCP</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.mariadb.jdbc:mariadb-java-client</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.jooq:jooq</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>com.fasterxml.jackson.core:jackson-databind</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.yaml:snakeyaml</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
-
-                                <!-- Явно исключаем dev/test зависимости -->
-                                <filter>
-                                    <artifact>org.projectlombok:*</artifact>
-                                    <includes>
-                                        <include>nothing</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.mapstruct:*</artifact>
-                                    <includes>
-                                        <include>nothing</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.liquibase:liquibase-core</artifact>
-                                    <includes>
-                                        <include>nothing</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>com.github.seeseemelk:MockBukkit-v1.20</artifact>
-                                    <includes>
-                                        <include>nothing</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.testcontainers:*</artifact>
-                                    <includes>
-                                        <include>nothing</include>
-                                    </includes>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/LICENSE*</exclude>
+                                        <exclude>META-INF/NOTICE*</exclude>
+                                        <exclude>META-INF/DEPENDENCIES</exclude>
+                                        <exclude>module-info.class</exclude>
+                                    </excludes>
                                 </filter>
                             </filters>
                             <transformers>
@@ -602,6 +560,18 @@
             </build>
         </profile>
     </profiles>
+
+<!--    &lt;!&ndash; Publishing to Reposilite &ndash;&gt;-->
+<!--    <distributionManagement>-->
+<!--        <repository>-->
+<!--            <id>reposilite-releases</id>-->
+<!--            <url>https://maven.joutak.ru/releases</url>-->
+<!--        </repository>-->
+<!--        <snapshotRepository>-->
+<!--            <id>reposilite-snapshots</id>-->
+<!--            <url>https://maven.joutak.ru/snapshots</url>-->
+<!--        </snapshotRepository>-->
+<!--    </distributionManagement>-->
 
     <repositories>
         <repository>
