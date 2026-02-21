@@ -11,8 +11,8 @@ public class PlayerProlongedBroadcastListener implements Consumer<PlayerProlonge
     @Override
     public void accept(PlayerProlongedEvent event) {
         String msg = event.gift()
-                ? "Игрок " + event.player().getName() + " получил подарок на" + event.duration()+"!"
-                : "Игрок " + event.player().getName() + " продлил проходку" + event.duration()+"!";
+                ? "Игрок " + event.player().getName() + " получил подарок на" + event.duration() + "!"
+                : "Игрок " + event.player().getName() + " продлил проходку" + event.duration() + "!";
         Messaging.broadcast(Component.text(msg));
     }
 }

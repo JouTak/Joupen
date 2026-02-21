@@ -24,12 +24,32 @@ public class JoupenPassProlongedEvent extends Event {
         this.validUntil = validUntil;
     }
 
-    public UUID getUuid() { return uuid; }
-    public String getName() { return name; }
-    public boolean isGift() { return gift; }
-    public Duration getDuration() { return duration; }
-    public LocalDateTime getValidUntil() { return validUntil; }
+    public UUID getUuid() {
+        return uuid;
+    }
 
-    @Override public HandlerList getHandlers() { return HANDLERS; }
-    public static HandlerList getHandlerList() { return HANDLERS; }
+    public String getName() {
+        return name;
+    }
+
+    public boolean isGift() {
+        return gift;
+    }
+
+    public Duration getDuration() {
+        return duration;
+    }
+
+    public LocalDateTime getValidUntil() {
+        return validUntil;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return HANDLERS;
+    }
+
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
+    }
 }

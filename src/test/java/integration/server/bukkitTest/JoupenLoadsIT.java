@@ -8,7 +8,7 @@
 //import java.nio.file.Path;
 //import java.util.regex.Pattern;
 //
-///**
+/// **
 // * Интеграционный тест: стартуем Purpur в Docker через Testcontainers и проверяем,
 // * что Joupen плагин успешно загружается.
 // */

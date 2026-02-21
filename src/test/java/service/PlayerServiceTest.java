@@ -63,9 +63,9 @@ public class PlayerServiceTest {
     @Test
     void prolongOne_shouldPublishEventWithCorrectData() {
         LocalDateTime now = LocalDateTime.now();
-        PlayerEntity existing = new PlayerEntity(1L, UUID.randomUUID(), "TestPlayer", 
+        PlayerEntity existing = new PlayerEntity(1L, UUID.randomUUID(), "TestPlayer",
                 now.plusDays(10), now.minusDays(20), true);
-        
+
         when(repo.findByName("TestPlayer")).thenReturn(Optional.of(existing));
         doNothing().when(repo).updateByName(any(), anyString());
 

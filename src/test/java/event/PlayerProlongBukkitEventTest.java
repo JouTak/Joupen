@@ -66,7 +66,7 @@ public class PlayerProlongBukkitEventTest {
 
         assertEquals(1, eventCount.get(), "Bukkit event should be fired once");
         assertNotNull(capturedEvent.get(), "Event should be captured");
-        
+
         JoupenPassProlongedEvent event = capturedEvent.get();
         assertEquals(playerUuid, event.getUuid());
         assertEquals("TestPlayer", event.getName());

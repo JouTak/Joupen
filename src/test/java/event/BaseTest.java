@@ -19,7 +19,7 @@ public abstract class BaseTest {
         server = MockBukkit.mock();
         player = server.addPlayer();
         player.setName(TEST_NAME);
-        
+
         // Создаём временный файл с тестовыми данными
         try {
             java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test-player", ".json");
