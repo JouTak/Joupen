@@ -226,6 +226,7 @@ public class InfoCommandTest {
         cmd.execute();
 
         assertFalse(messages.isEmpty());
+        System.out.println(messages.get(0));
 //        assertTrue(messages.get(0).contains("15 дн."));
         assertTrue(messages.get(0).contains("50%"));
     }
