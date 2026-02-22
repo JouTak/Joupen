@@ -12,6 +12,7 @@ import org.joupen.messaging.Messaging;
 import org.joupen.messaging.Recipient;
 import org.joupen.messaging.channels.MessageChannel;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.utils.TimeUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -199,35 +200,14 @@ public class InfoCommandTest {
     }
 
     @Test
-    void execute_validPassWith50Percent_shouldDisplayCorrectly() {
-        LocalDateTime now = LocalDateTime.now();
+    void calculatePassProgress_halfWay_shouldBe15DaysAnd50Percent() {
+        LocalDateTime now = LocalDateTime.of(2026, 2, 22, 12, 0);
         LocalDateTime lastProlong = now.minusDays(15);
         LocalDateTime validUntil = now.plusDays(15);
-        PlayerEntity entity = new PlayerEntity(1L, UUID.randomUUID(), "HalfWay",
-                validUntil, lastProlong, true);
-        PlayerDto dto = PlayerDto.builder()
-                .name("HalfWay")
-                .uuid(entity.getUuid())
-                .validUntil(validUntil)
-                .lastProlongDate(lastProlong)
-                .build();
 
-        when(repo.findByName("HalfWay")).thenReturn(Optional.of(entity));
-        when(mapper.entityToDto(entity)).thenReturn(dto);
+        TimeUtils.PassProgress progress = TimeUtils.calculatePassProgress(now, lastProlong, validUntil);
 
-        BuildContext ctx = BuildContext.builder()
-                .sender(sender)
-                .args(new String[]{"HalfWay"})
-                .playerRepository(repo)
-                .playerMapper(mapper)
-                .build();
-
-        InfoCommand cmd = new InfoCommand(ctx);
-        cmd.execute();
-
-        assertFalse(messages.isEmpty());
-        System.out.println(messages.get(0));
-//        assertTrue(messages.get(0).contains("15 дн."));
-        assertTrue(messages.get(0).contains("50%"));
+        assertEquals(15, progress.getDaysRemaining());
+        assertEquals(50, progress.getPercent());
     }
 }

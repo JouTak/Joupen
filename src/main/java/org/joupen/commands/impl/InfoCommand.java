@@ -14,13 +14,13 @@ import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.messaging.Messaging;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.utils.TimeUtils;
 import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +41,7 @@ public class InfoCommand implements GameCommand, CommandValidator {
         this.mapper = buildContext.getPlayerMapper() != null
                 ? buildContext.getPlayerMapper()
                 : Mappers.getMapper(PlayerMapper.class);
+
         String[] args = buildContext.getArgs();
         this.targetName = args.length == 0 ? buildContext.getSender().getName() : args[0];
         this.self = args.length == 0;
@@ -79,14 +80,10 @@ public class InfoCommand implements GameCommand, CommandValidator {
         LocalDateTime validUntil = dto.getValidUntil();
         LocalDateTime lastProlong = dto.getLastProlongDate();
 
-        long daysRemaining = Math.max(0, ChronoUnit.DAYS.between(now, validUntil));
-        long totalDays = ChronoUnit.DAYS.between(lastProlong, validUntil);
-        int percent = totalDays > 0
-                ? (int) Math.round(100.0 * daysRemaining / totalDays)
-                : 0;
+        TimeUtils.PassProgress progress = TimeUtils.calculatePassProgress(now, lastProlong, validUntil);
 
         String validUntilText = validUntil.format(FMT)
-                + " (" + daysRemaining + " дн., " + percent + "%)";
+                + " (" + progress.getDaysRemaining() + " дн., " + progress.getPercent() + "%)";
 
         TextComponent textComponent = Component.text()
                 .append(Component.text(self ? "Твой Ник: " : "Ник Игрока: ", NamedTextColor.GREEN))
