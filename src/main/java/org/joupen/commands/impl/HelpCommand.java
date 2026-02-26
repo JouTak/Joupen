@@ -1,15 +1,20 @@
 package org.joupen.commands.impl;
 
-import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
+import org.joupen.commands.BuildContext;
+import org.joupen.commands.CommandAlias;
 import org.joupen.commands.GameCommand;
 
-@RequiredArgsConstructor
+@CommandAlias(name = "help")
 public class HelpCommand implements GameCommand {
     private final CommandSender sender;
+
+    public HelpCommand(BuildContext buildContext) {
+        this.sender = buildContext.getSender();
+    }
 
     @Override
     public void execute() {

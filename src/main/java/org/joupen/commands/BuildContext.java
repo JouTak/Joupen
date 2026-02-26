@@ -13,7 +13,8 @@ import org.joupen.service.PlayerService;
 public class BuildContext {
     private final CommandSender sender;
     private final String label;
-    private final String[] argsTail;
+    private final String[] commandArgsWithName;
+    private final String[] args;
     private final PlayerRepository playerRepository;
     private final PlayerService playerService;
     private final PlayerMapper playerMapper;

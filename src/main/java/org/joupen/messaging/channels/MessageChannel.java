@@ -8,5 +8,6 @@ import org.joupen.messaging.Recipient;
  */
 public interface MessageChannel {
     String id();
+
     void send(Recipient recipient, Component message);
 }

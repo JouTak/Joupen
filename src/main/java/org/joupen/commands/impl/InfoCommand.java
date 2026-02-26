@@ -1,6 +1,5 @@
 package org.joupen.commands.impl;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -8,26 +7,45 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.joupen.commands.BuildContext;
+import org.joupen.commands.CommandAlias;
 import org.joupen.commands.GameCommand;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.dto.PlayerDto;
 import org.joupen.mapper.PlayerMapper;
 import org.joupen.messaging.Messaging;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.utils.TimeUtils;
 import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
+import org.mapstruct.factory.Mappers;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-@RequiredArgsConstructor
+@CommandAlias(name = "info", maxArgs = 1)
 public class InfoCommand implements GameCommand, CommandValidator {
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
     private final CommandSender sender;
     private final PlayerRepository repo;
     private final PlayerMapper mapper;
     private final String targetName;
     private final boolean self;
+
+    public InfoCommand(BuildContext buildContext) {
+        this.sender = buildContext.getSender();
+        this.repo = buildContext.getPlayerRepository();
+        this.mapper = buildContext.getPlayerMapper() != null
+                ? buildContext.getPlayerMapper()
+                : Mappers.getMapper(PlayerMapper.class);
+
+        String[] args = buildContext.getArgs();
+        this.targetName = args.length == 0 ? buildContext.getSender().getName() : args[0];
+        this.self = args.length == 0;
+    }
 
     @Override
     public List<Component> validate(BuildContext ctx, String[] args) {
@@ -49,6 +67,7 @@ public class InfoCommand implements GameCommand, CommandValidator {
 
         PlayerEntity entity = optional.get();
         PlayerDto dto = mapper.entityToDto(entity);
+
         Component nameComponent = Component.text(dto.getName(), NamedTextColor.BLUE)
                 .clickEvent(ClickEvent.copyToClipboard(dto.getName()))
                 .hoverEvent(Component.text("Нажми, чтобы скопировать ник", NamedTextColor.GRAY));
@@ -56,6 +75,15 @@ public class InfoCommand implements GameCommand, CommandValidator {
         Component uuidComponent = Component.text(dto.getUuid().toString(), NamedTextColor.BLUE)
                 .clickEvent(ClickEvent.copyToClipboard(dto.getUuid().toString()))
                 .hoverEvent(Component.text("Нажми, чтобы скопировать UUID", NamedTextColor.GRAY));
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime validUntil = dto.getValidUntil();
+        LocalDateTime lastProlong = dto.getLastProlongDate();
+
+        TimeUtils.PassProgress progress = TimeUtils.calculatePassProgress(now, lastProlong, validUntil);
+
+        String validUntilText = validUntil.format(FMT)
+                + " (" + progress.getDaysRemaining() + " дн., " + progress.getPercent() + "%)";
 
         TextComponent textComponent = Component.text()
                 .append(Component.text(self ? "Твой Ник: " : "Ник Игрока: ", NamedTextColor.GREEN))
@@ -65,10 +93,10 @@ public class InfoCommand implements GameCommand, CommandValidator {
                 .append(uuidComponent)
                 .appendNewline()
                 .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getLastProlongDate().toString(), NamedTextColor.DARK_GREEN))
+                .append(Component.text(lastProlong.format(FMT), NamedTextColor.DARK_GREEN))
                 .appendNewline()
                 .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(dto.getValidUntil().toString(), NamedTextColor.DARK_GREEN))
+                .append(Component.text(validUntilText, NamedTextColor.DARK_GREEN))
                 .build();
 
         Messaging.reply(sender, textComponent);
