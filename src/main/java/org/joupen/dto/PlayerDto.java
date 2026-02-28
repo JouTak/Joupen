@@ -27,5 +27,6 @@ public class PlayerDto {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime validUntil;
 
+    @Builder.Default
     private Boolean paid = true;
 }

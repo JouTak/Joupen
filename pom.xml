@@ -255,7 +255,6 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
-                        <include>**/*IT.java</include>
                     </includes>
                     <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
@@ -269,6 +268,7 @@
                 <executions>
                     <execution>
                         <id>integration-tests</id>
+                        <phase>package</phase>
                         <goals>
                             <goal>integration-test</goal>
                             <goal>verify</goal>
@@ -311,13 +311,28 @@
                                     <!-- Paper уже содержит -->
                                     <exclude>org.slf4j:*</exclude>
                                     <exclude>org.yaml:snakeyaml</exclude>
-                                    <!-- Не нужны в runtime -->
-                                    <exclude>io.r2dbc:*</exclude>
-                                    <exclude>org.reactivestreams:*</exclude>
+                                    <!-- jakarta.xml.bind не нужен в runtime -->
                                     <exclude>jakarta.xml.bind:*</exclude>
                                 </excludes>
                             </artifactSet>
                             <filters>
+                                <!-- MariaDB driver загружается через рефлексию (HikariCP) —
+                                     minimizeJar не видит прямой зависимости и вырезает его -->
+                                <filter>
+                                    <artifact>org.mariadb.jdbc:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+
+                                <!-- Jackson TypeReference загружается дженериками,
+                                     minimizeJar иногда вырезает его -->
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.core:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
