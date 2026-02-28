@@ -15,6 +15,7 @@ public final class TimeUtils {
         // utility class
     }
 
+    // --- твой существующий метод ---
     public static Duration parseDuration(String durationStr) {
         log.info("Parsing duration string: {}", durationStr);
 
@@ -22,7 +23,6 @@ public final class TimeUtils {
             throw new IllegalArgumentException("Duration string is blank");
         }
 
-        // mo должно идти раньше m, иначе "mo" распарсится как "m"
         Pattern pattern = Pattern.compile("(\\d+)(mo|[dhm])", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(durationStr.toLowerCase());
 
@@ -38,25 +38,11 @@ public final class TimeUtils {
             String unit = matcher.group(2);
 
             switch (unit) {
-                case "mo":
-                    months += value;   // += чтобы можно было "1mo2mo"
-                    log.info("Parsed months += {}", value);
-                    break;
-                case "d":
-                    days += value;
-                    log.info("Parsed days += {}", value);
-                    break;
-                case "h":
-                    hours += value;
-                    log.info("Parsed hours += {}", value);
-                    break;
-                case "m":
-                    minutes += value;
-                    log.info("Parsed minutes += {}", value);
-                    break;
-                default:
-                    // сюда не попадём из-за regex, но пусть будет
-                    throw new IllegalArgumentException("Unknown duration unit: " + unit);
+                case "mo" -> months += value;
+                case "d" -> days += value;
+                case "h" -> hours += value;
+                case "m" -> minutes += value;
+                default -> throw new IllegalArgumentException("Unknown duration unit: " + unit);
             }
         }
 
@@ -76,6 +62,7 @@ public final class TimeUtils {
         return duration;
     }
 
+    // --- твой существующий метод форматирования ---
     public static String formatDuration(Duration duration) {
         if (duration == null) {
             return "0m";
@@ -98,6 +85,42 @@ public final class TimeUtils {
         return result.isEmpty() ? "0m" : result;
     }
 
+    // --- новый метод: человекочитаемый формат с склонениями ---
+    public static String formatDurationReadable(Duration duration) {
+        if (duration == null) return "0 минут";
+
+        long totalMinutes = duration.toMinutes();
+        long days = totalMinutes / (24 * 60);
+        long hours = (totalMinutes % (24 * 60)) / 60;
+        long minutes = totalMinutes % 60;
+
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) sb.append(days).append(" ").append(pluralDays(days)).append(" ");
+        if (hours > 0) sb.append(hours).append(" ").append(pluralHours(hours)).append(" ");
+        if (minutes > 0) sb.append(minutes).append(" ").append(pluralMinutes(minutes)).append(" ");
+
+        return sb.toString().trim();
+    }
+
+    private static String pluralDays(long n) {
+        if (n % 10 == 1 && n % 100 != 11) return "день";
+        if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return "дня";
+        return "дней";
+    }
+
+    private static String pluralHours(long n) {
+        if (n % 10 == 1 && n % 100 != 11) return "час";
+        if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return "часа";
+        return "часов";
+    }
+
+    private static String pluralMinutes(long n) {
+        if (n % 10 == 1 && n % 100 != 11) return "минута";
+        if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return "минуты";
+        return "минут";
+    }
+
+    // --- твой существующий метод PassProgress ---
     public static PassProgress calculatePassProgress(
             LocalDateTime now,
             LocalDateTime lastProlong,
