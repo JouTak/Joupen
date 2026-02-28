@@ -1,6 +1,8 @@
 package org.joupen.service;
 
 import lombok.RequiredArgsConstructor;
+import org.bukkit.Bukkit;
+import org.joupen.bukkit.event.JoupenPassProlongedEvent;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.enums.UUIDTypes;
 import org.joupen.events.PlayerProlongedEvent;
@@ -41,6 +43,7 @@ public class PlayerService {
         }
 
         EventUtils.publish(new PlayerProlongedEvent(entity, gift, duration));
+        Bukkit.getPluginManager().callEvent(new JoupenPassProlongedEvent(entity.getUuid(), entity.getName(), gift, duration, entity.getValidUntil()));
 
         return entity;
     }

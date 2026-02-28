@@ -5,7 +5,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.joupen.messaging.Recipient;
-import org.joupen.messaging.channels.MessageChannel;
 
 /**
  * Один канал "chat" умеет отправлять:
