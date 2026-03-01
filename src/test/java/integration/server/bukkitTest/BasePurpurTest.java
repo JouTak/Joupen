@@ -68,8 +68,13 @@ public abstract class BasePurpurTest {
             // (liquibase-core имеет scope=provided, не попадает в fat JAR плагина)
             runLiquibaseMigrations();
 
+            org.testcontainers.Testcontainers.exposeHostPorts(mariadb.getMappedPort(3306));
+
             // Создаём config.yml для Joupen с SQL настройками
-            // migrate: false — миграции уже прогнаны из тестового кода
+            // Используем host.testcontainers.internal чтобы контейнер Purpur могу
+            // достучаться до проброшенного порта MariaDB.
+            // Сеть Docker (network aliases) может сбоить в GitHub Actions из-за специфики
+            // dind.
             Path pluginConfigDir = tempPluginsDir.resolve("JoupenPlugin");
             Files.createDirectories(pluginConfigDir);
             String configYml = String.format("""
@@ -78,11 +83,11 @@ public abstract class BasePurpurTest {
                       useSql: true
                       migrate: false
                     database:
-                      url: jdbc:mariadb://mariadb:3306/Joupen
+                      url: jdbc:mariadb://host.testcontainers.internal:%d/Joupen
                       user: %s
                       password: %s
                       driver: org.mariadb.jdbc.Driver
-                    """, config.mariaDbUser, config.mariaDbPassword);
+                    """, mariadb.getMappedPort(3306), config.mariaDbUser, config.mariaDbPassword);
             Files.writeString(pluginConfigDir.resolve("config.yml"), configYml);
             System.out.println("📄 Created SQL config.yml");
         } else if (config.customConfigDir != null && Files.exists(config.customConfigDir)) {
@@ -134,10 +139,6 @@ public abstract class BasePurpurTest {
                         org.testcontainers.containers.BindMode.READ_WRITE)
                 .withStartupTimeout(Duration.ofMinutes(8))
                 .withLogConsumer(this::printPurpurLogFrame);
-
-        if (config.useSql && network != null) {
-            purpurBuilder = purpurBuilder.withNetwork(network);
-        }
 
         purpur = purpurBuilder;
 
