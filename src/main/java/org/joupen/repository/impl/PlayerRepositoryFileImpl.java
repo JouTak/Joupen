@@ -1,6 +1,6 @@
 package org.joupen.repository.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.repository.PlayerRepository;
@@ -9,6 +9,7 @@ import org.joupen.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -107,8 +108,9 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
 
             String fileContent = java.nio.file.Files.readString(jsonFile.toPath());
 
-            return Utils.fromJson(fileContent, new TypeReference<>() {
-            });
+            Type listType = new TypeToken<List<PlayerEntity>>() {
+            }.getType();
+            return Utils.fromJson(fileContent, listType);
         } catch (IOException e) {
             log.error("Error reading players file", e);
             return null;
@@ -124,3 +126,4 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
         }
     }
 }
+

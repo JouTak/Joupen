@@ -96,6 +96,12 @@
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>${mariadb.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.waffle</groupId>
+                    <artifactId>waffle-jna</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Liquibase (compile-time not нужен — оставим provided) -->
@@ -106,16 +112,12 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Jackson -->
+        <!-- Gson — provided, Paper уже содержит -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.17.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.17.2</version>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- SnakeYAML — provided, Paper уже содержит -->
@@ -199,12 +201,6 @@
             <version>42.7.4</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>ru.joutak</groupId>
-            <artifactId>minigamesapi</artifactId>
-            <version>1.0.0</version>
-            <classifier>all</classifier>
-        </dependency>
         <!-- Logging — provided, Paper уже содержит SLF4J -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -255,7 +251,6 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
-                        <include>**/*IT.java</include>
                     </includes>
                     <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
@@ -296,6 +291,7 @@
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <minimizeJar>true</minimizeJar>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
                             <artifactSet>
                                 <excludes>
                                     <!-- test / provided — не должны попасть -->
@@ -312,8 +308,6 @@
                                     <exclude>org.slf4j:*</exclude>
                                     <exclude>org.yaml:snakeyaml</exclude>
                                     <!-- Не нужны в runtime -->
-                                    <exclude>io.r2dbc:*</exclude>
-                                    <exclude>org.reactivestreams:*</exclude>
                                     <exclude>jakarta.xml.bind:*</exclude>
                                 </excludes>
                             </artifactSet>
@@ -328,8 +322,24 @@
                                         <exclude>META-INF/LICENSE*</exclude>
                                         <exclude>META-INF/NOTICE*</exclude>
                                         <exclude>META-INF/DEPENDENCIES</exclude>
+                                        <exclude>META-INF/maven/**</exclude>
                                         <exclude>module-info.class</exclude>
+                                        <exclude>**/*.kotlin_metadata</exclude>
                                     </excludes>
+                                </filter>
+                                <!-- minimizeJar удаляет классы, загружаемые через рефлексию -->
+                                <!-- Явно включаем MariaDB driver и MapStruct runtime -->
+                                <filter>
+                                    <artifact>org.mariadb.jdbc:mariadb-java-client</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.mapstruct:mapstruct</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
                                 </filter>
                             </filters>
                             <transformers>
@@ -561,17 +571,17 @@
         </profile>
     </profiles>
 
-<!--    &lt;!&ndash; Publishing to Reposilite &ndash;&gt;-->
-<!--    <distributionManagement>-->
-<!--        <repository>-->
-<!--            <id>reposilite-releases</id>-->
-<!--            <url>https://maven.joutak.ru/releases</url>-->
-<!--        </repository>-->
-<!--        <snapshotRepository>-->
-<!--            <id>reposilite-snapshots</id>-->
-<!--            <url>https://maven.joutak.ru/snapshots</url>-->
-<!--        </snapshotRepository>-->
-<!--    </distributionManagement>-->
+    <!--    &lt;!&ndash; Publishing to Reposilite &ndash;&gt;-->
+    <!--    <distributionManagement>-->
+    <!--        <repository>-->
+    <!--            <id>reposilite-releases</id>-->
+    <!--            <url>https://maven.joutak.ru/releases</url>-->
+    <!--        </repository>-->
+    <!--        <snapshotRepository>-->
+    <!--            <id>reposilite-snapshots</id>-->
+    <!--            <url>https://maven.joutak.ru/snapshots</url>-->
+    <!--        </snapshotRepository>-->
+    <!--    </distributionManagement>-->
 
     <repositories>
         <repository>
