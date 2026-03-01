@@ -68,13 +68,9 @@ public abstract class BasePurpurTest {
             // (liquibase-core имеет scope=provided, не попадает в fat JAR плагина)
             runLiquibaseMigrations();
 
-            org.testcontainers.Testcontainers.exposeHostPorts(mariadb.getMappedPort(3306));
-
             // Создаём config.yml для Joupen с SQL настройками
-            // Используем host.testcontainers.internal чтобы контейнер Purpur могу
-            // достучаться до проброшенного порта MariaDB.
-            // Сеть Docker (network aliases) может сбоить в GitHub Actions из-за специфики
-            // dind.
+            // migrate: false — миграции уже прогнаны из тестового кода
+            // Purpur подключается к MariaDB через общую Docker-сеть по алиасу "mariadb"
             Path pluginConfigDir = tempPluginsDir.resolve("JoupenPlugin");
             Files.createDirectories(pluginConfigDir);
             String configYml = String.format("""
@@ -83,11 +79,11 @@ public abstract class BasePurpurTest {
                       useSql: true
                       migrate: false
                     database:
-                      url: jdbc:mariadb://host.testcontainers.internal:%d/Joupen
+                      url: jdbc:mariadb://mariadb:3306/Joupen
                       user: %s
                       password: %s
                       driver: org.mariadb.jdbc.Driver
-                    """, mariadb.getMappedPort(3306), config.mariaDbUser, config.mariaDbPassword);
+                    """, config.mariaDbUser, config.mariaDbPassword);
             Files.writeString(pluginConfigDir.resolve("config.yml"), configYml);
             System.out.println("📄 Created SQL config.yml");
         } else if (config.customConfigDir != null && Files.exists(config.customConfigDir)) {
@@ -139,6 +135,12 @@ public abstract class BasePurpurTest {
                         org.testcontainers.containers.BindMode.READ_WRITE)
                 .withStartupTimeout(Duration.ofMinutes(8))
                 .withLogConsumer(this::printPurpurLogFrame);
+
+        // Purpur и MariaDB должны быть в одной Docker-сети для связи по алиасу
+        // "mariadb"
+        if (network != null) {
+            purpurBuilder = purpurBuilder.withNetwork(network);
+        }
 
         purpur = purpurBuilder;
 
