@@ -48,7 +48,7 @@ public class TestCacheUtils {
                     Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Failed to copy plugin to cache", e);
+                System.err.println("⚠️ Сould not copy " + src + " to cache: " + e.getMessage());
             }
         });
 
