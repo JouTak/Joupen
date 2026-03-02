@@ -120,7 +120,7 @@ public abstract class BasePurpurTest {
         }
 
         // 4️⃣ Purpur container
-        this.purpurCacheDir = TestCacheUtils.preparePurpurCache(tempPluginsDir);
+        this.purpurCacheDir = TestCacheUtils.preparePurpurCache(tempPluginsDir, getClass().getSimpleName());
 
         GenericContainer<?> purpurBuilder = new GenericContainer<>("itzg/minecraft-server:java17")
                 .withEnv("EULA", "TRUE")

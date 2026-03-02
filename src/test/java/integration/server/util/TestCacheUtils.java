@@ -21,8 +21,10 @@ public class TestCacheUtils {
         }
     }
 
-    public static Path preparePurpurCache(Path tempPluginsDir) throws Exception {
-        Path purpurCache = Paths.get(System.getProperty("user.home"), ".joupen-test-cache", "purpur-data");
+    public static Path preparePurpurCache(Path tempPluginsDir, String testId) throws Exception {
+        // Каждый тестовый класс получает свою изолированную директорию,
+        // чтобы root-файлы Docker-контейнера одного теста не мешали другому
+        Path purpurCache = Paths.get(System.getProperty("user.home"), ".joupen-test-cache", "purpur-data-" + testId);
         Files.createDirectories(purpurCache);
 
         Path cachedPluginsDir = purpurCache.resolve("plugins");
