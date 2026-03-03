@@ -23,12 +23,15 @@ jobs:
           server-username: REPOSILITE_USER
           server-password: REPOSILITE_TOKEN
 
+      - name: Calculate Version
+        run: echo "VERSION_DATE=$(date +'%d%m%y%H')" >> $GITHUB_ENV
+
       - name: Build, Test and Package
-        run: mvn -B verify
+        run: mvn -B verify -Drevision=$VERSION_DATE
 
       - name: Publish to Reposilite
 #        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/pers'
-        run: mvn -B deploy -DskipTests
+        run: mvn -B deploy -DskipTests -Drevision=$VERSION_DATE
         env:
           REPOSILITE_USER: joupen
           REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
