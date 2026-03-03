@@ -27,7 +27,7 @@ jobs:
         run: mvn -B verify
 
       - name: Publish to Reposilite
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/pers'
+#        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/pers'
         run: mvn -B deploy -DskipTests
         env:
           REPOSILITE_USER: github
