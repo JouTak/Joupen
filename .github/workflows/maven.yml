@@ -19,9 +19,19 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
+          server-id: reposilite
+          server-username: REPOSILITE_USER
+          server-password: REPOSILITE_TOKEN
 
-      - name: Build and Run All Tests (Unit & Integration)
+      - name: Build, Test and Package
         run: mvn -B verify
+
+      - name: Publish to Reposilite
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/pers'
+        run: mvn -B deploy -DskipTests
+        env:
+          REPOSILITE_USER: github
+          REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
 
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4

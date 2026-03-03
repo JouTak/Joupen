@@ -2,8 +2,12 @@ package org.joupen.utils;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.joupen.utils.config.ConfigConverter;
+import org.joupen.utils.config.DatabaseConfigConverter;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -16,11 +20,15 @@ public final class JoupenProperties {
     public static Map<String, Object> dbConfig;
     public static boolean isInitialized = false;
 
+    private static final List<ConfigConverter> CONVERTERS = List.of(
+            new DatabaseConfigConverter());
+
     private JoupenProperties() {
     }
 
     public static void initialize(File pluginFolder) {
-        if (isInitialized) return;
+        if (isInitialized)
+            return;
         loadConfig(pluginFolder);
         isInitialized = true;
     }
@@ -29,7 +37,8 @@ public final class JoupenProperties {
      * Инициализация напрямую из Map (например, в тестах)
      */
     public static void initialize(Map<String, Object> config) {
-        if (isInitialized) return;
+        if (isInitialized)
+            return;
         applyConfig(config, new File("."));
         isInitialized = true;
     }
@@ -49,6 +58,24 @@ public final class JoupenProperties {
         }
 
         Map<String, Object> config = loadYaml(configFile);
+
+        boolean changed = false;
+        for (ConfigConverter converter : CONVERTERS) {
+            if (converter.convert(config)) {
+                changed = true;
+                log.info("Config migrated by {}", converter.getClass().getSimpleName());
+            }
+        }
+
+        if (changed) {
+            try {
+                YamlUtils.saveYaml(configFile, config);
+                log.info("Saved migrated config to {}", configFile.getAbsolutePath());
+            } catch (IOException e) {
+                log.error("Failed to save migrated config: {}", e.getMessage(), e);
+            }
+        }
+
         log.info("Loaded config:\n{}", config);
 
         applyConfig(config, configDir);
@@ -58,13 +85,15 @@ public final class JoupenProperties {
     private static void applyConfig(Map<String, Object> config, File configDir) {
         Map<String, Object> pluginConfig = (Map<String, Object>) config.getOrDefault("plugin", Map.of());
 
-        playersFilepath = new File(configDir, (String) pluginConfig.getOrDefault("playersFile", "player.json")).getPath();
+        playersFilepath = new File(configDir, (String) pluginConfig.getOrDefault("playersFile", "player.json"))
+                .getPath();
 
         useSql = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("useSql", false)));
         migrate = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("migrate", false)));
         enabled = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("enabled", true)));
 
-        log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}", playersFilepath, enabled, useSql, migrate);
+        log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}", playersFilepath, enabled,
+                useSql, migrate);
 
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
@@ -99,10 +128,11 @@ public final class JoupenProperties {
                   useSql: false
                   migrate: false
                 database:
-                  url: jdbc:mariadb://localhost:3306/mydb
-                  user: user
+                  jdbcUrl: jdbc:mariadb://localhost:3306/mydb
+                  username: user
                   password: user_password
-                  driver: org.mariadb.jdbc.Driver
+                  driverClassName: org.mariadb.jdbc.Driver
+                  maximumPoolSize: 10
                 """;
         try {
             if (configFile.exists()) {

@@ -51,6 +51,7 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
             <version>${mapstruct.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -241,21 +242,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Surefire (Tests) -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-                <configuration>
-                    <includes>
-                        <include>**/*Test.java</include>
-                        <include>**/*Tests.java</include>
-                        <include>**/*TestCase.java</include>
-                    </includes>
-                    <testFailureIgnore>false</testFailureIgnore>
-                </configuration>
-            </plugin>
-
             <!-- Failsafe (Integration Tests) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -268,11 +254,6 @@
                             <goal>integration-test</goal>
                             <goal>verify</goal>
                         </goals>
-                        <configuration>
-                            <includes>
-                                <include>**/*IT.java</include>
-                            </includes>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -292,25 +273,6 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <minimizeJar>true</minimizeJar>
                             <shadedArtifactAttached>false</shadedArtifactAttached>
-                            <artifactSet>
-                                <excludes>
-                                    <!-- test / provided — не должны попасть -->
-                                    <exclude>org.junit.jupiter:*</exclude>
-                                    <exclude>org.mockito:*</exclude>
-                                    <exclude>com.github.seeseemelk:MockBukkit-v1.20</exclude>
-                                    <exclude>org.testcontainers:*</exclude>
-                                    <exclude>org.projectlombok:*</exclude>
-                                    <exclude>org.mapstruct:mapstruct-processor</exclude>
-                                    <exclude>org.liquibase:*</exclude>
-                                    <exclude>org.jooq:jooq-codegen</exclude>
-                                    <exclude>org.jooq:jooq-meta-extensions-liquibase</exclude>
-                                    <!-- Paper уже содержит -->
-                                    <exclude>org.slf4j:*</exclude>
-                                    <exclude>org.yaml:snakeyaml</exclude>
-                                    <!-- Не нужны в runtime -->
-                                    <exclude>jakarta.xml.bind:*</exclude>
-                                </excludes>
-                            </artifactSet>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -327,29 +289,13 @@
                                         <exclude>**/*.kotlin_metadata</exclude>
                                     </excludes>
                                 </filter>
-                                <!-- minimizeJar удаляет классы, загружаемые через рефлексию -->
-                                <!-- Явно включаем MariaDB driver и MapStruct runtime -->
                                 <filter>
                                     <artifact>org.mariadb.jdbc:mariadb-java-client</artifact>
                                     <includes>
                                         <include>**</include>
                                     </includes>
                                 </filter>
-                                <filter>
-                                    <artifact>org.mapstruct:mapstruct</artifact>
-                                    <includes>
-                                        <include>**</include>
-                                    </includes>
-                                </filter>
                             </filters>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <manifestEntries>
-                                        <Main-Class>org.joupen.JoupenPlugin</Main-Class>
-                                    </manifestEntries>
-                                </transformer>
-                            </transformers>
                         </configuration>
                     </execution>
                 </executions>
@@ -361,66 +307,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <id>copy-changelog-files</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/classes/db/changelog</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>src/main/resources/db/changelog</directory>
-                                    <includes>
-                                        <include>**/*</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy-config-yml</id>
-                        <phase>process-test-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.testOutputDirectory}/JoupenPlugin</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>src/main/resources/JoupenPlugin</directory>
-                                    <includes>
-                                        <include>config.yml</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy-players-json</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/classes/loginPluginRes</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>src/main/resources</directory>
-                                    <includes>
-                                        <include>players.json</include>
-                                    </includes>
-                                    <filtering>true</filtering>
-                                    <excludes>
-                                        <exclude>docker-compose/**</exclude>
-                                    </excludes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <!-- jOOQ Codegen (из Liquibase changelog'ов в H2) -->
@@ -497,25 +383,6 @@
                 </dependencies>
             </plugin>
 
-            <!-- Add generated sources -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.build.directory}/generated-sources/jooq</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
 
         <resources>
@@ -550,13 +417,8 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <propertyFile>liquibase.properties</propertyFile>
                             <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
-                            <url>jdbc:mariadb://localhost:3306/Joupen1</url>
-                            <username>user</username>
-                            <password>user_password</password>
-                            <driver>org.mariadb.jdbc.Driver</driver>
-                            <searchPath>${project.basedir}/src/main/resources</searchPath>
-                            <changeLogFile>db/changelog/master.yaml</changeLogFile>
                         </configuration>
                         <dependencies>
                             <dependency>
@@ -571,17 +433,17 @@
         </profile>
     </profiles>
 
-    <!--    &lt;!&ndash; Publishing to Reposilite &ndash;&gt;-->
-    <!--    <distributionManagement>-->
-    <!--        <repository>-->
-    <!--            <id>reposilite-releases</id>-->
-    <!--            <url>https://maven.joutak.ru/releases</url>-->
-    <!--        </repository>-->
-    <!--        <snapshotRepository>-->
-    <!--            <id>reposilite-snapshots</id>-->
-    <!--            <url>https://maven.joutak.ru/snapshots</url>-->
-    <!--        </snapshotRepository>-->
-    <!--    </distributionManagement>-->
+        <!-- Publishing to Reposilite -->
+        <distributionManagement>
+            <repository>
+                <id>reposilite</id>
+                <url>https://maven.joutak.ru/releases</url>
+            </repository>
+            <snapshotRepository>
+                <id>reposilite</id>
+                <url>https://maven.joutak.ru/snapshots</url>
+            </snapshotRepository>
+        </distributionManagement>
 
     <repositories>
         <repository>

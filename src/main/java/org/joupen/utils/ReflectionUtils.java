@@ -6,40 +6,42 @@ import org.joupen.commands.GameCommand;
 import org.reflections.Reflections;
 
 import java.lang.reflect.Constructor;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 public class ReflectionUtils {
 
-//    public static Set<Class<? extends MyInterface>> findClassesImplementsInterface(String packageName) {
-//
-//    }
+    // public static Set<Class<? extends MyInterface>>
+    // findClassesImplementsInterface(String packageName) {
+    //
+    // }
 
-    public static Set<Class<? extends GameCommand>> findClassesImplementsInterfaceGameCommand() {
+    private static final Map<String, Class<? extends GameCommand>> COMMAND_CACHE = new HashMap<>();
+
+    public static void init() {
+        if (!COMMAND_CACHE.isEmpty())
+            return;
         Reflections reflections = new Reflections("org.joupen.commands.impl");
         Set<Class<? extends GameCommand>> classes = reflections.getSubTypesOf(GameCommand.class);
-        return classes;
+        for (Class<? extends GameCommand> clazz : classes) {
+            CommandAlias ann = clazz.getAnnotation(CommandAlias.class);
+            if (ann != null) {
+                COMMAND_CACHE.put(ann.name().toLowerCase(), clazz);
+            }
+        }
     }
 
     public static Class<? extends GameCommand> findCommandByAlias(String alias) {
-        return findClassesImplementsInterfaceGameCommand().stream()
-                .filter(c -> {
-                    CommandAlias ann = c.getAnnotation(CommandAlias.class);
-                    return ann != null && ann.name().equalsIgnoreCase(alias);
-                })
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Неизвестная команда"));
+        Class<? extends GameCommand> clazz = COMMAND_CACHE.get(alias.toLowerCase());
+        if (clazz == null) {
+            throw new IllegalArgumentException("Неизвестная команда");
+        }
+        return clazz;
     }
 
     public static Constructor<? extends GameCommand> findCommandConstructorByAlias(String alias) {
-        Class<? extends GameCommand> commandClass = findClassesImplementsInterfaceGameCommand().stream()
-                .filter(c -> {
-                    CommandAlias ann = c.getAnnotation(CommandAlias.class);
-                    return ann != null && ann.name().equalsIgnoreCase(alias);
-                })
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Неизвестная команда"));
-
-        return getCommandConstructor(commandClass);
+        return getCommandConstructor(findCommandByAlias(alias));
     }
 
     public static Constructor<? extends GameCommand> getCommandConstructor(Class<? extends GameCommand> clazz) {
@@ -48,7 +50,6 @@ public class ReflectionUtils {
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(
                     "У команды " + clazz.getName() + " нет конструктора (BuildContext)", e);
-
         }
     }
 
