@@ -5,10 +5,14 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+    types: [opened, synchronize, reopened, closed]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      IS_PR_CLOSED: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+      IS_MERGED_PR_TO_PROD: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && (github.base_ref == 'master' || github.base_ref == 'develop') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -24,21 +28,27 @@ jobs:
           server-password: REPOSILITE_TOKEN
 
       - name: Calculate Version
-        run: echo "VERSION_DATE=$(date +'%d%m%y%H')" >> $GITHUB_ENV
+        run: |
+          DATE=$(date +'%d%m%y%H')
+          if [ "${{ github.base_ref }}" == "master" ]; then
+            PREFIX="release"
+          else
+            PREFIX="develop"
+          fi
+          echo "VERSION_DATE=Joupen-${PREFIX}-${DATE}" >> $GITHUB_ENV
 
       - name: Build, Test and Package
         run: mvn -B verify -Drevision=$VERSION_DATE
-
-      - name: Publish to Reposilite
-#        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/pers'
-        run: mvn -B deploy -DskipTests -Drevision=$VERSION_DATE
-        env:
-          REPOSILITE_USER: joupen
-          REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
 
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
         with:
           name: joupen-plugin-jars
-          path: |
-            target/*.jar
+          path: target/*.jar
+
+      - name: Publish to Reposilite (only after merge to master/develop)
+        if: env.IS_MERGED_PR_TO_PROD == 'true'
+        env:
+          REPOSILITE_USER: joupen
+          REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
+        run: mvn -B deploy -DskipTests -Drevision=$VERSION_DATE
