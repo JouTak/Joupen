@@ -1,28 +1,35 @@
 package utilstest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.joupen.dto.PlayerDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DateTimeTest {
 
-    private ObjectMapper objectMapper;
+    private Gson gson;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     @BeforeEach
     public void setUp() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
+        gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .registerTypeAdapter(LocalDateTime.class, (com.google.gson.JsonSerializer<LocalDateTime>) (src, typeOfSrc, context) ->
+                        new com.google.gson.JsonPrimitive(src.format(DATE_FORMATTER)))
+                .registerTypeAdapter(LocalDateTime.class, (com.google.gson.JsonDeserializer<LocalDateTime>) (json, typeOfT, context) ->
+                        LocalDateTime.parse(json.getAsJsonPrimitive().getAsString(), DATE_FORMATTER))
+                .create();
     }
 
     @Test
-    public void testSerializationAndDeserialization() throws Exception {
+    public void testSerializationAndDeserialization() {
         PlayerDto originalDto = PlayerDto.builder()
                 .id(1L)
                 .name("Player1")
@@ -32,14 +39,14 @@ public class DateTimeTest {
                 .paid(true)
                 .build();
 
-        String json = objectMapper.writeValueAsString(originalDto);
+        String json = gson.toJson(originalDto);
         System.out.println("Serialized JSON: " + json);
 
-        assertTrue(json.contains("\"lastProlongDate\":\"2025-01-01T00:00:00\""), "lastProlongDate should be in 'yyyy-MM-dd'T'HH:mm:ss' format");
-        assertTrue(json.contains("\"validUntil\":\"2025-05-18T00:00:00\""), "validUntil should be in 'yyyy-MM-dd HH:mm' format");
-        assertTrue(json.contains("\"paid\":true"), "paid should be present as 'paid'");
+        assertTrue(json.contains("\"lastProlongDate\": \"2025-01-01T00:00:00\""), "lastProlongDate should be in 'yyyy-MM-dd'T'HH:mm:ss' format");
+        assertTrue(json.contains("\"validUntil\": \"2025-05-18T00:00:00\""), "validUntil should be in 'yyyy-MM-dd'T'HH:mm:ss' format");
+        assertTrue(json.contains("\"paid\": true"), "paid should be present as 'paid'");
 
-        PlayerDto deserializedDto = objectMapper.readValue(json, PlayerDto.class);
+        PlayerDto deserializedDto = gson.fromJson(json, PlayerDto.class);
 
         assertEquals(originalDto.getId(), deserializedDto.getId(), "ID should match");
         assertEquals(originalDto.getName(), deserializedDto.getName(), "Name should match");
@@ -50,7 +57,7 @@ public class DateTimeTest {
     }
 
     @Test
-    public void testDeserializationFromJsonString() throws Exception {
+    public void testDeserializationFromJsonString() {
         String json = """
                 {
                     "id": 2,
@@ -62,7 +69,7 @@ public class DateTimeTest {
                 }
                 """;
 
-        PlayerDto dto = objectMapper.readValue(json, PlayerDto.class);
+        PlayerDto dto = gson.fromJson(json, PlayerDto.class);
 
         assertEquals(2L, dto.getId(), "ID should be 2");
         assertEquals("Player2", dto.getName(), "Name should be Player2");

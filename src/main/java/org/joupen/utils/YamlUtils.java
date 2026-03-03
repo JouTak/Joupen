@@ -20,4 +20,10 @@ public class YamlUtils {
             writer.write(defaultContent);
         }
     }
+
+    public static void saveYaml(File file, Map<String, Object> config) throws IOException {
+        try (FileWriter writer = new FileWriter(file)) {
+            yaml.dump(config, writer);
+        }
+    }
 }

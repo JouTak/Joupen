@@ -1,9 +1,16 @@
 package org.joupen;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
+import org.jooq.conf.RenderNameCase;
+import org.jooq.conf.Settings;
+import org.jooq.impl.DSL;
 import org.joupen.commands.impl.JoupenCommand;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
@@ -16,6 +23,8 @@ import org.joupen.repository.PlayerRepositoryFactory;
 import org.joupen.service.MigrationService;
 import org.joupen.utils.EventUtils;
 import org.joupen.utils.JoupenProperties;
+
+import java.util.Properties;
 
 @Getter
 @Slf4j
@@ -47,7 +56,7 @@ public class JoupenPlugin extends JavaPlugin {
                 databaseManager = new DatabaseManager();
                 transactionManager = new TransactionManager(databaseManager);
             }
-            this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(databaseManager, transactionManager);
+            this.playerRepository = PlayerRepositoryFactory.getPlayerRepository(transactionManager);
 
             log.info("Using profile with repository {}", playerRepository.getClass().getSimpleName());
         } catch (Exception e) {
@@ -60,6 +69,7 @@ public class JoupenPlugin extends JavaPlugin {
         }
 
         Messaging.initialize();
+        org.joupen.utils.ReflectionUtils.init();
 
         new JoupenCommand(playerRepository, transactionManager);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
