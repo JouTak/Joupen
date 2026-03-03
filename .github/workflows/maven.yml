@@ -30,7 +30,7 @@ jobs:
 #        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/pers'
         run: mvn -B deploy -DskipTests
         env:
-          REPOSILITE_USER: github
+          REPOSILITE_USER: joupen
           REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
 
       - name: Upload JAR artifacts
