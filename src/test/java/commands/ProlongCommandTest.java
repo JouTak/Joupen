@@ -1,7 +1,6 @@
 package commands;
 
 import be.seeseemelk.mockbukkit.MockBukkit;
-import be.seeseemelk.mockbukkit.ServerMock;
 import org.bukkit.command.CommandSender;
 import org.joupen.commands.BuildContext;
 import org.joupen.commands.impl.GiftCommand;
@@ -20,17 +19,17 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ProlongCommandTest {
 
-    private ServerMock server;
     private PlayerRepository repo;
     private PlayerService playerService;
     private CommandSender sender;
 
     @BeforeEach
     void setUp() {
-        server = MockBukkit.mock();
+        MockBukkit.mock();
         repo = mock(PlayerRepository.class);
         playerService = new PlayerService(repo);
         sender = mock(CommandSender.class);
@@ -133,8 +132,9 @@ public class ProlongCommandTest {
 
     @Test
     void giftCommand_shouldSetGiftFlag() {
+        LocalDateTime lastPaidProlong = LocalDateTime.now().minusDays(42).withSecond(0).withNano(0);
         PlayerEntity unpaid = new PlayerEntity(1L, UUID.randomUUID(), "UnpaidPlayer",
-                LocalDateTime.now().minusDays(5), LocalDateTime.now(), false);
+                LocalDateTime.now().minusDays(5), lastPaidProlong, false);
 
         when(repo.findByName("UnpaidPlayer")).thenReturn(Optional.of(unpaid));
         doNothing().when(repo).updateByName(any(), anyString());
@@ -149,7 +149,10 @@ public class ProlongCommandTest {
         GiftCommand cmd = new GiftCommand(ctx);
         cmd.execute();
 
-        verify(repo, times(1)).updateByName(any(PlayerEntity.class), eq("UnpaidPlayer"));
+        var captor = org.mockito.ArgumentCaptor.forClass(PlayerEntity.class);
+        verify(repo, times(1)).updateByName(captor.capture(), eq("UnpaidPlayer"));
+        assertEquals(lastPaidProlong, captor.getValue().getLastProlongDate(),
+                "Gift must not overwrite lastProlongDate (paid prolong date)");
     }
 
     @Test

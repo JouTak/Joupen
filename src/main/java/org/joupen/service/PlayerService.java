@@ -34,7 +34,9 @@ public class PlayerService {
 
         LocalDateTime base = entity.getValidUntil().isBefore(now) ? now : entity.getValidUntil();
         entity.setValidUntil(base.plus(duration));
-        entity.setLastProlongDate(now);
+        if (!gift) {
+            entity.setLastProlongDate(now);
+        }
 
         if (playerEntityOptional.isEmpty()) {
             repo.save(entity);
