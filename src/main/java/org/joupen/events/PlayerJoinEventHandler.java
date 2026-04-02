@@ -142,7 +142,6 @@ public class PlayerJoinEventHandler implements Listener {
                         entity = optionalEntity.get();
                         LocalDateTime base = entity.getValidUntil().isBefore(now) ? now : entity.getValidUntil();
                         entity.setValidUntil(base.plus(duration));
-                        entity.setLastProlongDate(now);
                         entity.setUuid(player.getUniqueId());
                         playerRepository.updateByName(entity, nick);
                     } else {
@@ -150,7 +149,7 @@ public class PlayerJoinEventHandler implements Listener {
                         entity.setName(nick);
                         entity.setUuid(player.getUniqueId());
                         entity.setValidUntil(now.plus(duration));
-                        entity.setLastProlongDate(now);
+                        entity.setLastProlongDate(now.minusDays(1));
                         entity.setPaid(false);
                         playerRepository.save(entity);
                     }
