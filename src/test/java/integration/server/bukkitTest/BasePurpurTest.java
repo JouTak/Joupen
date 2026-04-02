@@ -125,7 +125,7 @@ public abstract class BasePurpurTest {
         GenericContainer<?> purpurBuilder = new GenericContainer<>("itzg/minecraft-server:java17")
                 .withEnv("EULA", "TRUE")
                 .withEnv("TYPE", "PURPUR")
-                .withEnv("VERSION", "1.20.4")
+                .withEnv("VERSION", "1.21.1")
                 .withEnv("ENABLE_RCON", "true")
                 .withEnv("RCON_PASSWORD", "test")
                 .withEnv("RCON_PORT", "25575")
