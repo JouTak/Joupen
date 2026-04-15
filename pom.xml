@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.discordsrv</groupId>
             <artifactId>discordsrv</artifactId>
-            <version>1.21.1</version>
+            <version>1.28.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -466,8 +466,8 @@
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
         <repository>
-            <id>scarsz-nexus</id>
-            <url>https://nexus.scarsz.me/content/groups/public/</url>
+            <id>loohpjames-repo</id>
+            <url>https://repo.loohpjames.com/repository/</url>
         </repository>
     </repositories>
 </project>
