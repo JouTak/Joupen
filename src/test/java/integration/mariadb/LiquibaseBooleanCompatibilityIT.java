@@ -40,7 +40,7 @@ class LiquibaseBooleanCompatibilityIT {
     private static void applyChangelog(java.sql.Connection connection) throws Exception {
         Database db = DatabaseFactory.getInstance()
                 .findCorrectDatabaseImplementation(new JdbcConnection(connection));
-        Liquibase liquibase = new Liquibase("db/changelog/master.yaml", new ClassLoaderResourceAccessor(), db);
+        Liquibase liquibase = new Liquibase("db/changelog/master.xml", new ClassLoaderResourceAccessor(), db);
         liquibase.update("");
     }
 }

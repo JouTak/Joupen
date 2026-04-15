@@ -41,7 +41,7 @@ public abstract class BaseCrudMariaDBTest {
                         new JdbcConnection(mariaDB.createConnection(""))
                 );
         Liquibase liquibase = new Liquibase(
-                "db/changelog/master.yaml",
+                "db/changelog/master.xml",
                 new ClassLoaderResourceAccessor(),
                 database
         );
