@@ -18,6 +18,10 @@ public final class JoupenProperties {
     public static Boolean migrate = false;
     public static Boolean enabled = true;
     public static Map<String, Object> dbConfig;
+    public static boolean discordSrvPassProlongedEnabled = true;
+    public static String discordSrvPassProlongedChannel = "mc-live";
+    public static String discordSrvPassProlongedColor = "#30d5c8";
+    public static boolean discordSrvPassProlongedShowDuration = false;
     public static boolean isInitialized = false;
 
     private static final List<ConfigConverter> CONVERTERS = List.of(
@@ -95,6 +99,24 @@ public final class JoupenProperties {
         log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}", playersFilepath, enabled,
                 useSql, migrate);
 
+        Map<String, Object> discordSrvConfig = getMap(config, "discordsrv");
+        Map<String, Object> passProlongedConfig = getMap(discordSrvConfig, "pass-prolonged");
+        discordSrvPassProlongedEnabled = Boolean.parseBoolean(
+                String.valueOf(passProlongedConfig.getOrDefault("enabled", true))
+        );
+        discordSrvPassProlongedChannel = String.valueOf(passProlongedConfig.getOrDefault("channel", "mc-live"));
+        discordSrvPassProlongedColor = String.valueOf(passProlongedConfig.getOrDefault("color", "#30d5c8"));
+        discordSrvPassProlongedShowDuration = Boolean.parseBoolean(
+                String.valueOf(passProlongedConfig.getOrDefault("show-duration", false))
+        );
+        log.info(
+                "DiscordSRV config: enabled={}, channel={}, color={}, showDuration={}",
+                discordSrvPassProlongedEnabled,
+                discordSrvPassProlongedChannel,
+                discordSrvPassProlongedColor,
+                discordSrvPassProlongedShowDuration
+        );
+
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
             log.info("Database config: {}", dbConfig);
@@ -133,6 +155,12 @@ public final class JoupenProperties {
                   password: user_password
                   driverClassName: org.mariadb.jdbc.Driver
                   maximumPoolSize: 10
+                discordsrv:
+                  pass-prolonged:
+                    enabled: true
+                    channel: mc-live
+                    color: "#30d5c8"
+                    show-duration: false
                 """;
         try {
             if (configFile.exists()) {
@@ -145,5 +173,14 @@ public final class JoupenProperties {
             log.error("Failed to create default config.yml: {} - {}", configFile.getAbsolutePath(), e.getMessage());
             throw new IllegalStateException("Failed to create default config.yml", e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> getMap(Map<String, Object> source, String key) {
+        Object value = source.get(key);
+        if (value instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+        return Map.of();
     }
 }
