@@ -2,8 +2,8 @@ package org.joupen.events.listeners;
 
 import github.scarsz.discordsrv.DiscordSRV;
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import github.scarsz.discordsrv.dependencies.jda.api.EmbedBuilder;
+import github.scarsz.discordsrv.dependencies.jda.api.entities.TextChannel;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.joupen.bukkit.event.JoupenPassProlongedEvent;
