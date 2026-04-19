@@ -27,6 +27,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.discordsrv</groupId>
+            <artifactId>discordsrv</artifactId>
+            <version>1.28.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
             <version>0.10.2</version>
@@ -106,12 +112,12 @@
             </exclusions>
         </dependency>
 
-        <!-- Liquibase (compile-time not нужен — оставим provided) -->
+        <!-- Liquibase нужен только тестам и codegen -->
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
             <version>${liquibase.version}</version>
-            <scope>provided</scope>
+            <scope>test</scope>
         </dependency>
 
         <!-- Gson — provided, Paper уже содержит -->
@@ -122,12 +128,11 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- SnakeYAML — provided, Paper уже содержит -->
+        <!-- SnakeYAML нужен и плагину, и тестам -->
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.2</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Tests -->
@@ -333,7 +338,7 @@
                                         </property>
                                         <property>
                                             <key>scripts</key>
-                                            <value>master.yaml</value>
+                                            <value>master.xml</value>
                                         </property>
                                         <property>
                                             <key>includeLiquibaseTables</key>
@@ -458,6 +463,10 @@
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+        <repository>
+            <id>loohpjames-repo</id>
+            <url>https://repo.loohpjames.com/repository/</url>
         </repository>
     </repositories>
 </project>

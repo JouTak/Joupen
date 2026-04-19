@@ -270,7 +270,7 @@ public abstract class BasePurpurTest {
                 var database = DatabaseFactory.getInstance()
                         .findCorrectDatabaseImplementation(new JdbcConnection(connection));
                 try (Liquibase liquibase = new Liquibase(
-                        "db/changelog/master.yaml",
+                        "db/changelog/master.xml",
                         new ClassLoaderResourceAccessor(),
                         database)) {
                     liquibase.update("");

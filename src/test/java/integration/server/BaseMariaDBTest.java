@@ -30,7 +30,7 @@ public abstract class BaseMariaDBTest {
 
         Database db = DatabaseFactory.getInstance()
                 .findCorrectDatabaseImplementation(new JdbcConnection(mariaDB.createConnection("")));
-        Liquibase liquibase = new Liquibase("db/changelog/master.yaml", new ClassLoaderResourceAccessor(), db);
+        Liquibase liquibase = new Liquibase("db/changelog/master.xml", new ClassLoaderResourceAccessor(), db);
         liquibase.update("");
 
         HikariConfig config = new HikariConfig();

@@ -43,6 +43,19 @@ public class PlayerRepositoryFileImplTest {
         assertTrue(repo.findByName("testplayer").isPresent());
     }
 
+
+    @Test
+    void shouldCreateMissingPlayersFileOnFirstUse() throws Exception {
+        Path missingFile = tempDir.resolve("nested").resolve("player.json");
+        JoupenProperties.playersFilepath = missingFile.toString();
+
+        repo = new PlayerRepositoryFileImpl();
+        repo.findAll();
+
+        assertTrue(Files.exists(missingFile));
+        assertTrue(Files.readString(missingFile).contains("[]"));
+    }
+
     @Test
     void delete_shouldRemove() {
         UUID uuid = UUID.randomUUID();

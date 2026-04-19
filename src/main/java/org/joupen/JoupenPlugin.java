@@ -9,6 +9,7 @@ import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
 import org.joupen.events.PlayerJoinEventHandler;
 import org.joupen.events.PlayerProlongedEvent;
+import org.joupen.events.listeners.JoupenDiscordSrvListener;
 import org.joupen.events.listeners.PlayerProlongedBroadcastListener;
 import org.joupen.messaging.Messaging;
 import org.joupen.repository.PlayerRepository;
@@ -69,6 +70,7 @@ public class JoupenPlugin extends JavaPlugin {
 
         new JoupenCommand(playerRepository, transactionManager);
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
+        Bukkit.getPluginManager().registerEvents(new JoupenDiscordSrvListener(), this);
 
         EventUtils.register(PlayerProlongedEvent.class, new PlayerProlongedBroadcastListener());
         PlayerService playerService = new PlayerService(playerRepository);
