@@ -1,16 +1,9 @@
 package org.joupen;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jooq.DSLContext;
-import org.jooq.SQLDialect;
-import org.jooq.conf.RenderNameCase;
-import org.jooq.conf.Settings;
-import org.jooq.impl.DSL;
 import org.joupen.commands.impl.JoupenCommand;
 import org.joupen.database.DatabaseManager;
 import org.joupen.database.TransactionManager;
@@ -21,10 +14,12 @@ import org.joupen.messaging.Messaging;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.repository.PlayerRepositoryFactory;
 import org.joupen.service.MigrationService;
+import org.joupen.service.PlayerService;
+import org.joupen.service.ScheduledGiftService;
 import org.joupen.utils.EventUtils;
 import org.joupen.utils.JoupenProperties;
 
-import java.util.Properties;
+import java.nio.file.Path;
 
 @Getter
 @Slf4j
@@ -34,6 +29,7 @@ public class JoupenPlugin extends JavaPlugin {
     private PlayerRepository playerRepository;
     private DatabaseManager databaseManager;
     private TransactionManager transactionManager;
+    private ScheduledGiftService scheduledGiftService;
 
     @Override
     public void onEnable() {
@@ -75,6 +71,10 @@ public class JoupenPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
 
         EventUtils.register(PlayerProlongedEvent.class, new PlayerProlongedBroadcastListener());
+        PlayerService playerService = new PlayerService(playerRepository);
+        Path scheduledGiftsPath = this.getDataFolder().toPath().resolve("scheduled-gifts.txt");
+        scheduledGiftService = new ScheduledGiftService(this, playerService, scheduledGiftsPath);
+        scheduledGiftService.start();
 
         log.info("JoupenPlugin enabled successfully!");
     }
@@ -82,6 +82,9 @@ public class JoupenPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         log.info("JoupenPlugin disabling...");
+        if (scheduledGiftService != null) {
+            scheduledGiftService.stop();
+        }
         if (databaseManager != null) {
             databaseManager.close();
         }
