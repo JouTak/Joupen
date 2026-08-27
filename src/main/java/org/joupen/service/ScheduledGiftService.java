@@ -4,14 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.joupen.domain.OperationMetadata;
 import org.joupen.utils.TimeUtils;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -52,16 +50,15 @@ public class ScheduledGiftService {
         LocalDate today = LocalDate.now();
         List<String> remainingLines = new ArrayList<>();
 
-        try (BufferedReader reader = Files.newBufferedReader(scheduleFile, StandardCharsets.UTF_8)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            for (String line : GiftQueueFile.read(scheduleFile, 3)) {
                 String trimmed = line.trim();
                 if (trimmed.isEmpty() || trimmed.startsWith("#")) {
                     continue;
                 }
 
                 String[] parts = trimmed.split("\\s+");
-                if (parts.length != 3) {
+                if (parts.length != 4) {
                     log.warn("Invalid scheduled gift format (expected: <nick> <duration> <yyyy-MM-dd>): {}", line);
                     remainingLines.add(line);
                     continue;
@@ -88,7 +85,8 @@ public class ScheduledGiftService {
                 }
 
                 try {
-                    playerService.prolongOne(nick, duration, true);
+                    playerService.prolongOne(nick, duration, true,
+                            new OperationMetadata(dateRaw, "scheduled-gift", null, parts[3]));
                     log.info("Scheduled gift applied for {} on {} (duration={})", nick, today, durationRaw);
                 } catch (Exception e) {
                     log.error("Failed to apply scheduled gift for {}: {}", nick, e.getMessage());
@@ -102,7 +100,7 @@ public class ScheduledGiftService {
         }
 
         try {
-            Files.write(scheduleFile, remainingLines, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+            GiftQueueFile.write(scheduleFile, remainingLines);
         } catch (IOException e) {
             log.error("Error writing scheduled gifts file {}: {}", scheduleFile, e.getMessage());
         }

@@ -7,16 +7,12 @@ import org.joupen.domain.PlayerEntity;
 import org.joupen.domain.PlayerOperation;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.JoupenProperties;
+import org.joupen.utils.FileUtils;
 import org.joupen.utils.Utils;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -166,18 +162,7 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
         String json = Utils.toJson(players);
         if (json == null) throw new IllegalStateException("Failed to serialize players");
         try {
-            Files.createDirectories(path.getParent());
-            Path temporary = Files.createTempFile(path.getParent(), "joupen-", ".tmp");
-            try {
-                try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
-                    ByteBuffer data = StandardCharsets.UTF_8.encode(json);
-                    while (data.hasRemaining()) channel.write(data);
-                    channel.force(true);
-                }
-                Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } finally {
-                Files.deleteIfExists(temporary);
-            }
+            FileUtils.writeAtomic(path, json);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write players: " + path, e);
         }

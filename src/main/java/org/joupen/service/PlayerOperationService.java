@@ -7,6 +7,7 @@ import org.joupen.domain.OperationType;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.domain.PlayerOperation;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.utils.Utils;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -37,13 +38,18 @@ public class PlayerOperationService {
     }
 
     public OperationResult grant(String name, Duration duration, OperationType type, OperationMetadata metadata) {
+        return grant(name, duration, type, metadata, null);
+    }
+
+    public OperationResult grant(String name, Duration duration, OperationType type, OperationMetadata metadata, UUID uuid) {
         long seconds = durationSeconds(duration);
         if (seconds < 0 || type != OperationType.PURCHASE && type != OperationType.GIFT && type != OperationType.COMPENSATION) {
             throw new OperationException("invalid-duration");
         }
-        return apply(name, metadata, type + ":" + seconds, (current, history) -> {
+        return apply(name, metadata, type + ":" + seconds + ":" + uuid, (current, history) -> {
             PlayerEntity after = current.map(PlayerOperation::snapshot).orElseGet(() -> newPlayer(name));
             if (current.isEmpty()) after.setPaid(type == OperationType.PURCHASE);
+            if (uuid != null) after.setUuid(uuid);
             LocalDateTime base = after.getValidUntil();
             if (base == null || base.isBefore(now())) base = now();
             after.setValidUntil(base.plusSeconds(seconds));
@@ -140,6 +146,14 @@ public class PlayerOperationService {
     public List<PlayerOperation> history(String name, int page) {
         if (page < 1 || page > Integer.MAX_VALUE / 10) throw new OperationException("invalid-page");
         return repo.findHistory(name, 10, (page - 1) * 10);
+    }
+
+    public OperationResult migratePlayer(PlayerEntity player, OperationMetadata metadata) {
+        return apply(player.getName(), metadata, "MIGRATION:" + Utils.toJson(player), (current, history) -> {
+            LocalDateTime before = current.map(PlayerEntity::getValidUntil).orElse(now());
+            long seconds = player.getValidUntil() == null ? 0 : Duration.between(before, player.getValidUntil()).getSeconds();
+            return operation(current, PlayerOperation.snapshot(player), OperationType.MIGRATION, seconds);
+        });
     }
 
     private boolean reversible(PlayerOperation operation) {

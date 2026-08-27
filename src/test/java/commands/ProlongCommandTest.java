@@ -31,6 +31,7 @@ public class ProlongCommandTest {
     void setUp() {
         MockBukkit.mock();
         repo = mock(PlayerRepository.class);
+        testsupport.OperationRepositoryMockSupport.enable(repo);
         playerService = new PlayerService(repo);
         sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Admin");
