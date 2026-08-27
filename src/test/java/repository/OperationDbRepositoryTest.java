@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -87,11 +88,30 @@ class OperationDbRepositoryTest {
             var first = executor.submit(() -> { start.await(); return apply("request-1"); });
             var second = executor.submit(() -> { start.await(); return apply("request-2"); });
             start.countDown();
-            assertTrue(first.get().applied());
-            assertTrue(second.get().applied());
+            assertTrue(first.get(10, TimeUnit.SECONDS).applied());
+            assertTrue(second.get(10, TimeUnit.SECONDS).applied());
             assertEquals(1, repo.findAll().size());
             assertEquals(2, repo.findHistory("Player", 10, 0).size());
             assertEquals(LocalDateTime.of(2026, 8, 30, 12, 0), repo.findByName("Player").orElseThrow().getValidUntil());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void concurrentDuplicateRequestsApplyOnlyOnce() throws Exception {
+        var executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            var first = executor.submit(() -> { start.await(); return apply("request-1"); });
+            var second = executor.submit(() -> { start.await(); return apply("request-1"); });
+            start.countDown();
+            var a = first.get(10, TimeUnit.SECONDS);
+            var b = second.get(10, TimeUnit.SECONDS);
+            assertNotEquals(a.applied(), b.applied());
+            assertEquals(a.operation().getId(), b.operation().getId());
+            assertEquals(1, repo.findHistory("Player", 10, 0).size());
+            assertEquals(LocalDateTime.of(2026, 8, 29, 12, 0), repo.findByName("Player").orElseThrow().getValidUntil());
         } finally {
             executor.shutdownNow();
         }

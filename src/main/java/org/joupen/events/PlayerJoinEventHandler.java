@@ -127,7 +127,7 @@ public class PlayerJoinEventHandler implements Listener {
                     Duration duration;
                     try {
                         duration = TimeUtils.parseDuration(reward);
-                    } catch (IllegalArgumentException e) {
+                    } catch (IllegalArgumentException | ArithmeticException e) {
                         log.error("Invalid gift '{}' for player {}", reward, nick);
                         player.sendMessage(Component.text(
                                 JoupenProperties.invalidGiftMessage.replace("{reward}", reward),

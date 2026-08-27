@@ -18,6 +18,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -129,6 +132,65 @@ class PlayerOperationServiceTest {
         assertThrows(OperationException.class, () -> service.grant("Player", Duration.ofDays(-1), OperationType.GIFT, metadata));
         assertThrows(OperationException.class, () -> service.temporaryAccess("Player", now, now, metadata));
         assertTrue(service.history("Player", 1).isEmpty());
+    }
+
+    @Test
+    void simultaneousUndoCanOnlyReverseAnOperationOnce() throws Exception {
+        var grant = service.grant("Player", Duration.ofDays(3), OperationType.PURCHASE, metadata);
+        var executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        java.util.concurrent.Callable<Boolean> undo = () -> {
+            start.await();
+            try {
+                return service.undo("Player", grant.operation().getId(), metadata).applied();
+            } catch (OperationException e) {
+                assertEquals("operation-already-reversed", e.getMessage());
+                return false;
+            }
+        };
+        try {
+            var first = executor.submit(undo);
+            var second = executor.submit(undo);
+            start.countDown();
+            assertNotEquals(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS));
+            assertEquals(now, repo.findByName("Player").orElseThrow().getValidUntil());
+            assertEquals(2, service.history("Player", 1).size());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void migrationRetryDoesNotOverwriteLaterOperations() {
+        PlayerEntity legacy = new PlayerEntity("Player", true, UUID.randomUUID(), now.plusDays(2), now);
+        OperationMetadata migration = new OperationMetadata("player.json", "migration", null, "snapshot-1");
+        var first = service.migratePlayer(legacy, migration);
+        service.adjust("Player", Duration.ofDays(3), metadata);
+        assertFalse(service.migratePlayer(legacy, migration).applied());
+        assertEquals(now.plusDays(5), repo.findByName("Player").orElseThrow().getValidUntil());
+        assertEquals(2, service.history("Player", 1).size());
+        assertThrows(OperationException.class, () -> service.undo("Player", first.operation().getId(), metadata));
+    }
+
+    @Test
+    void importWithoutPreviousProlongDateRecordsTheRemainingTime() {
+        PlayerEntity legacy = new PlayerEntity("Player", true, UUID.randomUUID(), now.plusDays(2), null);
+        var result = service.importPlayer(legacy, metadata);
+        assertEquals(Duration.ofDays(2).getSeconds(), result.operation().getDurationSeconds());
+        assertEquals(now, service.undo("Player", result.operation().getId(), metadata).operation().getAfter().getValidUntil());
+    }
+
+    @Test
+    void migrationMatchesExistingUuidAfterANameChange() {
+        UUID uuid = UUID.randomUUID();
+        service.grant("OldName", Duration.ofDays(1), OperationType.GIFT, metadata, uuid);
+        PlayerEntity imported = new PlayerEntity("NewName", true, uuid, now.plusDays(2), now);
+        OperationMetadata migration = new OperationMetadata("player.json", "migration", null, "snapshot-2");
+        service.migratePlayer(imported, migration);
+        assertEquals(1, repo.findAll().size());
+        assertEquals(2, service.history("NewName", 1).size());
+        assertFalse(service.migratePlayer(imported, migration).applied());
+        assertEquals(now.plusDays(2), repo.findByUuid(uuid).orElseThrow().getValidUntil());
     }
 
     private PlayerOperationService at(String instant) {

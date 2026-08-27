@@ -26,32 +26,35 @@ public final class TimeUtils {
         Pattern pattern = Pattern.compile("(\\d+)(mo|[dhm])", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(durationStr.toLowerCase());
 
-        int days = 0;
-        int hours = 0;
-        int minutes = 0;
-        int months = 0;
+        long days = 0;
+        long hours = 0;
+        long minutes = 0;
+        long months = 0;
         boolean found = false;
+        int end = 0;
 
         while (matcher.find()) {
+            if (matcher.start() != end) throw new IllegalArgumentException("Invalid duration format: " + durationStr);
+            end = matcher.end();
             found = true;
-            int value = Integer.parseInt(matcher.group(1));
+            long value = Long.parseLong(matcher.group(1));
             String unit = matcher.group(2);
 
             switch (unit) {
-                case "mo" -> months += value;
-                case "d" -> days += value;
-                case "h" -> hours += value;
-                case "m" -> minutes += value;
+                case "mo" -> months = Math.addExact(months, value);
+                case "d" -> days = Math.addExact(days, value);
+                case "h" -> hours = Math.addExact(hours, value);
+                case "m" -> minutes = Math.addExact(minutes, value);
                 default -> throw new IllegalArgumentException("Unknown duration unit: " + unit);
             }
         }
 
-        if (!found) {
+        if (!found || end != durationStr.length()) {
             log.warn("No valid duration found in string: {}", durationStr);
             throw new IllegalArgumentException("Invalid duration format: " + durationStr);
         }
 
-        Duration duration = Duration.ofDays(months * 30L)
+        Duration duration = Duration.ofDays(Math.multiplyExact(months, 30L))
                 .plusDays(days)
                 .plusHours(hours)
                 .plusMinutes(minutes);
@@ -62,11 +65,20 @@ public final class TimeUtils {
         return duration;
     }
 
+    public static Duration parseAdjustment(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("Duration string is blank");
+        boolean negative = value.startsWith("-");
+        String duration = negative || value.startsWith("+") ? value.substring(1) : value;
+        Duration parsed = parseDuration(duration);
+        return negative ? parsed.negated() : parsed;
+    }
+
     // --- твой существующий метод форматирования ---
     public static String formatDuration(Duration duration) {
         if (duration == null) {
             return "0m";
         }
+        if (duration.isNegative()) return "-" + formatDuration(duration.negated());
 
         long totalDays = duration.toDays();
         long months = totalDays / 30;

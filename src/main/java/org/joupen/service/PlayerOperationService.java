@@ -136,9 +136,10 @@ public class PlayerOperationService {
     }
 
     public OperationResult importPlayer(PlayerEntity player, OperationMetadata metadata) {
-        return apply(player.getName(), metadata, "IMPORT:" + player.getValidUntil(), (current, history) -> {
+        return apply(player.getName(), metadata, "IMPORT:" + Utils.toJson(player), (current, history) -> {
             if (current.isPresent()) throw new OperationException("player-already-exists");
-            long seconds = player.getValidUntil() == null ? 0 : Duration.between(player.getLastProlongDate(), player.getValidUntil()).getSeconds();
+            LocalDateTime from = player.getLastProlongDate() == null ? now() : player.getLastProlongDate();
+            long seconds = player.getValidUntil() == null ? 0 : Duration.between(from, player.getValidUntil()).getSeconds();
             return operation(current, PlayerOperation.snapshot(player), OperationType.IMPORT, seconds);
         });
     }
@@ -149,7 +150,11 @@ public class PlayerOperationService {
     }
 
     public OperationResult migratePlayer(PlayerEntity player, OperationMetadata metadata) {
-        return apply(player.getName(), metadata, "MIGRATION:" + Utils.toJson(player), (current, history) -> {
+        validateName(player.getName());
+        String target = player.getUuid() == null || INITIAL_UUID.getUuid().equals(player.getUuid()) ? player.getName()
+                : repo.findByUuid(player.getUuid()).map(PlayerEntity::getName).orElse(player.getName());
+        String request = player.getName().toLowerCase(Locale.ROOT) + ":MIGRATION:" + Utils.toJson(player);
+        return repo.applyOperation(target, metadata, request, (current, history) -> {
             LocalDateTime before = current.map(PlayerEntity::getValidUntil).orElse(now());
             long seconds = player.getValidUntil() == null ? 0 : Duration.between(before, player.getValidUntil()).getSeconds();
             return operation(current, PlayerOperation.snapshot(player), OperationType.MIGRATION, seconds);
@@ -163,8 +168,12 @@ public class PlayerOperationService {
 
     private OperationResult apply(String name, OperationMetadata metadata, String request,
                                   BiFunction<Optional<PlayerEntity>, List<PlayerOperation>, PlayerOperation> action) {
-        if (name == null || name.isBlank() || name.length() > 16) throw new OperationException("invalid-player");
+        validateName(name);
         return repo.applyOperation(name, metadata, name.toLowerCase(Locale.ROOT) + ":" + request, action);
+    }
+
+    private void validateName(String name) {
+        if (name == null || name.isBlank() || name.length() > 16) throw new OperationException("invalid-player");
     }
 
     private PlayerOperation operation(Optional<PlayerEntity> before, PlayerEntity after, OperationType type, long seconds) {

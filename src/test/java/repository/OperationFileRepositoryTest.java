@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,11 +85,26 @@ class OperationFileRepositoryTest {
             var first = executor.submit(request);
             var second = executor.submit(request);
             start.countDown();
-            assertNotEquals(first.get().applied(), second.get().applied());
+            assertNotEquals(first.get(10, TimeUnit.SECONDS).applied(), second.get(10, TimeUnit.SECONDS).applied());
             assertEquals(1, repo.findHistory("Player", 10, 0).size());
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void legacyUpdateAndDeletePreserveHistoryAndExternalIds() {
+        var original = apply(repo).operation();
+        PlayerEntity player = repo.findByName("Player").orElseThrow();
+        player.setApproved(true);
+        repo.updateByName(player, "Player");
+        assertEquals(1, repo.findHistory("Player", 10, 0).size());
+        assertFalse(repo.findHistory("Player", 10, 0).get(0).getAfter().getApproved());
+        repo.delete(player.getUuid());
+        assertTrue(repo.findByName("Player").isEmpty());
+        assertEquals(original.getId(), repo.findHistory("Player", 10, 0).get(0).getId());
+        assertFalse(apply(repo).applied());
+        assertTrue(repo.findByName("Player").isEmpty());
     }
 
     private OperationResult apply(PlayerRepositoryFileImpl repository) {

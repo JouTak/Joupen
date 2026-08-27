@@ -2,48 +2,42 @@ package org.joupen.commands.impl;
 
 import org.joupen.commands.BuildContext;
 import org.joupen.commands.CommandAlias;
-import org.joupen.commands.GameCommand;
-import org.joupen.service.PlayerService;
+import org.joupen.commands.OperationArguments;
+import org.joupen.commands.OperationCommand;
 import org.joupen.utils.TimeUtils;
 
 import java.time.Duration;
+import java.util.Map;
 
 @CommandAlias(
         name = "prolong",
         minArgs = 1,
-        maxArgs = 2,
-        usage = "/joupen prolong <player|all> [duration]",
+        maxArgs = Integer.MAX_VALUE,
+        usage = "/joupen prolong <player|all> [duration] [reason]",
         permission = "joupen.admin"
 )
-public class ProlongCommand implements GameCommand {
-    protected final PlayerService playerService;
-    protected final String target;
-    protected final String durationRaw;
-    protected final Duration defaultDuration;
-    protected final boolean gift;
+public class ProlongCommand extends OperationCommand {
+    private final boolean gift;
 
-    public ProlongCommand(BuildContext buildContext) {
-        this(buildContext, false);
+    public ProlongCommand(BuildContext context) {
+        this(context, false);
     }
 
-    protected ProlongCommand(BuildContext buildContext, boolean gift) {
-        this.playerService = buildContext.getPlayerService();
-        String[] args = buildContext.getArgs();
-        this.target = args.length > 0 ? args[0] : "";
-        this.durationRaw = args.length >= 2 ? args[1] : "";
-        this.defaultDuration = Duration.ofDays(30);
+    protected ProlongCommand(BuildContext context, boolean gift) {
+        super(context);
         this.gift = gift;
     }
 
     @Override
-    public void execute() {
-        Duration duration = durationRaw == null || durationRaw.isBlank()
-                ? defaultDuration
-                : TimeUtils.parseDuration(durationRaw);
+    protected void run(OperationArguments args) {
+        String target = args.get(0);
+        Duration duration = args.values().size() < 2 ? Duration.ofDays(30) : TimeUtils.parseDuration(args.get(1));
+        var metadata = args.metadata(sender, 2);
         if ("all".equalsIgnoreCase(target)) {
-            playerService.prolongAll(duration, gift);
+            playerService.prolongAll(duration, gift, metadata);
+            reply("batch-applied", Map.of());
         } else {
-            playerService.prolongOne(target, duration, gift);
+            replyResult(playerService.prolongOne(target, duration, gift, metadata));
         }
     }
 }

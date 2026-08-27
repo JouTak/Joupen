@@ -26,6 +26,23 @@ public class TimeUtilsTest {
     void parseDuration_invalid_shouldThrow() {
         assertThrows(IllegalArgumentException.class, () -> TimeUtils.parseDuration("abc"));
         assertThrows(IllegalArgumentException.class, () -> TimeUtils.parseDuration(""));
+        assertThrows(IllegalArgumentException.class, () -> TimeUtils.parseDuration("-3d"));
+        assertThrows(IllegalArgumentException.class, () -> TimeUtils.parseDuration("3days"));
+        assertThrows(IllegalArgumentException.class, () -> TimeUtils.parseDuration("3d-junk"));
+    }
+
+    @Test
+    void adjustmentsPreserveSign() {
+        assertEquals(Duration.ofDays(-3), TimeUtils.parseAdjustment("-3d"));
+        assertEquals(Duration.ofHours(12), TimeUtils.parseAdjustment("+12h"));
+        assertEquals("-3d", TimeUtils.formatDuration(Duration.ofDays(-3)));
+    }
+
+    @Test
+    void overflowingAmountsCannotChangeSign() {
+        assertEquals(Duration.ofMinutes(4294967294L), TimeUtils.parseDuration("2147483647m2147483647m"));
+        assertThrows(ArithmeticException.class, () -> TimeUtils.parseAdjustment("-9223372036854775807d"));
+        assertThrows(ArithmeticException.class, () -> TimeUtils.parseAdjustment("9223372036854775807m1m"));
     }
 
     @Test
