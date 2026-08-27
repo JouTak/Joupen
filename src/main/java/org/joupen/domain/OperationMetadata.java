@@ -9,13 +9,13 @@ import java.util.Locale;
 public record OperationMetadata(String reason, String source, String initiator, String externalId) {
     public OperationMetadata {
         if (source == null || source.isBlank() || source.length() > 64) {
-            throw new IllegalArgumentException("Source must contain 1 to 64 characters");
+            throw new OperationException("invalid-metadata");
         }
         source = source.toLowerCase(Locale.ROOT);
         if (reason != null && reason.length() > 1000
                 || initiator != null && initiator.length() > 128
                 || externalId != null && (externalId.isBlank() || externalId.length() > 255)) {
-            throw new IllegalArgumentException("Invalid operation metadata");
+            throw new OperationException("invalid-metadata");
         }
     }
 
