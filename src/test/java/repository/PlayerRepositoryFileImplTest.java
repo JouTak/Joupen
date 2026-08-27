@@ -83,4 +83,16 @@ public class PlayerRepositoryFileImplTest {
         assertEquals(from.withNano(0), saved.getTemporaryAccessFrom());
         assertEquals(until.withNano(0), saved.getTemporaryAccessUntil());
     }
+
+    @Test
+    void saveNewPlayer_shouldDefaultApprovalToFalse() {
+        PlayerEntity entity = new PlayerEntity();
+        entity.setUuid(UUID.randomUUID());
+        entity.setName("NewPlayer");
+
+        repo.save(entity);
+        PlayerEntity saved = repo.findByName("NewPlayer").orElseThrow();
+
+        assertFalse(saved.getApproved());
+    }
 }

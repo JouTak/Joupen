@@ -51,7 +51,10 @@ public class PlayerJoinEventGiftsTest extends BaseTest {
     void giftValidLine_shouldProlongAndRemoveLineFromFile_whenPlayerNotExists() throws Exception {
         Files.writeString(giftsFile, "TestPlayer 3d\nOther 2d\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-        when(repo.findByUuid(player.getUniqueId())).thenReturn(Optional.of(new PlayerEntity(player.getName(), false, player.getUniqueId(), LocalDateTime.now().plusDays(3), LocalDateTime.now())));
+        PlayerEntity playerEntity = new PlayerEntity(player.getName(), false, player.getUniqueId(),
+                LocalDateTime.now().plusDays(3), LocalDateTime.now());
+        playerEntity.setApproved(true);
+        when(repo.findByUuid(player.getUniqueId())).thenReturn(Optional.of(playerEntity));
         when(repo.findByName("TestPlayer")).thenReturn(Optional.empty());
 
         PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", InetAddress.getByName("127.0.0.1"));
@@ -94,7 +97,7 @@ public class PlayerJoinEventGiftsTest extends BaseTest {
         // assert: KICK_OTHER с текстом про неверный формат
         assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
         String raw = event.getKickMessage();
-        assertTrue(raw.equalsIgnoreCase("§9Тебя нет в вайтлисте. Напиши по этому поводу §cEnderDiss'e"), "ожидали текст о неверном формате");
+        assertTrue(raw.contains("пройди тест"));
 
         // репозиторий не трогали
         verify(repo, never()).save(any());

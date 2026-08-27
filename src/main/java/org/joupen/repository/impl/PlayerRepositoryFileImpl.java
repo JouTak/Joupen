@@ -125,6 +125,9 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
 
     private void writePlayerDtos(List<PlayerEntity> players) {
         try {
+            players.stream()
+                    .filter(player -> player.getApproved() == null)
+                    .forEach(player -> player.setApproved(false));
             File jsonFile = new File(JoupenProperties.playersFilepath);
             java.nio.file.Files.writeString(jsonFile.toPath(), Utils.toJson(players));
         } catch (IOException e) {

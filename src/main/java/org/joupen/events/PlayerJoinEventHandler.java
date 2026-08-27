@@ -2,7 +2,6 @@ package org.joupen.events;
 
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,6 +9,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.domain.PlayerEntity;
 import org.joupen.repository.PlayerRepository;
+import org.joupen.service.AccessDecision;
+import org.joupen.service.PlayerAccessService;
+import org.joupen.utils.JoupenProperties;
 import org.joupen.utils.TimeUtils;
 
 import java.io.BufferedReader;
@@ -33,9 +35,11 @@ import static org.joupen.enums.UUIDTypes.INITIAL_UUID;
 public class PlayerJoinEventHandler implements Listener {
 
     private final PlayerRepository playerRepository;
+    private final PlayerAccessService playerAccessService;
 
     public PlayerJoinEventHandler(PlayerRepository playerRepository) {
         this.playerRepository = playerRepository;
+        this.playerAccessService = new PlayerAccessService();
     }
 
     @EventHandler
@@ -51,42 +55,43 @@ public class PlayerJoinEventHandler implements Listener {
             optionalEntity = playerRepository.findByName(player.getName());
         }
 
-        if (optionalEntity.isEmpty()) {
-            TextComponent textComponent = Component.text()
-                    .append(Component.text("Тебя нет в вайтлисте. Напиши по этому поводу ", NamedTextColor.BLUE))
-                    .append(Component.text("EnderDiss'e", NamedTextColor.RED))
-                    .build();
-            playerLoginEvent.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, textComponent);
+        boolean hasPlayedBefore = player.hasPlayedBefore();
+        LocalDateTime now = LocalDateTime.now();
+        AccessDecision decision = playerAccessService.evaluate(optionalEntity, hasPlayedBefore, now);
+
+        if (decision == AccessDecision.APPROVAL_REQUIRED) {
+            playerLoginEvent.disallow(
+                    PlayerLoginEvent.Result.KICK_WHITELIST,
+                    Component.text(JoupenProperties.approvalRequiredMessage, NamedTextColor.BLUE)
+            );
             return;
         }
 
-        PlayerEntity playerEntity = optionalEntity.get();
-
-        // Проверка срока действия проходки
-        if (playerEntity.getValidUntil().isBefore(LocalDateTime.now())) {
-            log.info("У игрока {} была подписка до {}", playerEntity.getName(), playerEntity.getValidUntil());
-            TextComponent textComponent = Component.text()
-                    .append(Component.text("Проходка кончилась((( Надо оплатить и написать ", NamedTextColor.BLUE))
-                    .append(Component.text("EnderDiss'e", NamedTextColor.RED))
-                    .build();
-            playerLoginEvent.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, textComponent);
+        if (decision == AccessDecision.PASS_REQUIRED) {
+            playerLoginEvent.disallow(
+                    PlayerLoginEvent.Result.KICK_WHITELIST,
+                    Component.text(JoupenProperties.passRequiredMessage, NamedTextColor.BLUE)
+            );
             return;
         }
+
+        PlayerEntity playerEntity = optionalEntity.orElseThrow();
 
         // Обновляем UUID и продлеваем подписку, если это первый вход
         UUID uuid = playerEntity.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime validUntil = playerEntity.getValidUntil()
-                    .plusDays(ChronoUnit.DAYS.between(playerEntity.getLastProlongDate(), now));
+            if (!hasPlayedBefore) {
+                LocalDateTime validUntil = playerEntity.getValidUntil()
+                        .plusDays(ChronoUnit.DAYS.between(playerEntity.getLastProlongDate(), now));
 
-            playerEntity.setValidUntil(validUntil);
-            playerEntity.setLastProlongDate(now);
+                playerEntity.setValidUntil(validUntil);
+                playerEntity.setLastProlongDate(now);
+            }
             playerEntity.setUuid(player.getUniqueId());
 
             try {
                 playerRepository.updateByName(playerEntity, player.getName());
-                log.warn("Player {} joined for the first time, adjusted prohodka and changed UUID to {}",
+                log.info("Updated UUID for player {} to {}",
                         playerEntity.getName(), player.getUniqueId());
             } catch (Exception e) {
                 log.error("Failed to update player {} in repository: {}", playerEntity.getName(), e.getMessage());
@@ -127,7 +132,7 @@ public class PlayerJoinEventHandler implements Listener {
                     } catch (IllegalArgumentException e) {
                         log.error("Invalid gift '{}' for player {}", reward, nick);
                         player.sendMessage(Component.text(
-                                "Ошибка: неверный формат подарка (" + reward + "). Обратись к EnderDiss'e",
+                                JoupenProperties.invalidGiftMessage.replace("{reward}", reward),
                                 NamedTextColor.RED
                         ));
                         updatedLines.add(line); // оставляем строку
@@ -155,7 +160,10 @@ public class PlayerJoinEventHandler implements Listener {
                     }
 
                     player.sendMessage(Component.text(
-                            "Ура! Тебе добавили проходку: " + TimeUtils.formatDuration(duration),
+                            JoupenProperties.giftAppliedMessage.replace(
+                                    "{duration}",
+                                    TimeUtils.formatDuration(duration)
+                            ),
                             NamedTextColor.GOLD
                     ));
                     log.info("Player {} got a reward {}", nick, reward);
