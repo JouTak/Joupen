@@ -110,7 +110,13 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
 
             Type listType = new TypeToken<List<PlayerEntity>>() {
             }.getType();
-            return Utils.fromJson(fileContent, listType);
+            List<PlayerEntity> players = Utils.fromJson(fileContent, listType);
+            if (players != null) {
+                players.stream()
+                        .filter(player -> player.getApproved() == null)
+                        .forEach(player -> player.setApproved(true));
+            }
+            return players;
         } catch (IOException e) {
             log.error("Error reading players file", e);
             return null;
@@ -119,6 +125,9 @@ public class PlayerRepositoryFileImpl implements PlayerRepository {
 
     private void writePlayerDtos(List<PlayerEntity> players) {
         try {
+            players.stream()
+                    .filter(player -> player.getApproved() == null)
+                    .forEach(player -> player.setApproved(false));
             File jsonFile = new File(JoupenProperties.playersFilepath);
             java.nio.file.Files.writeString(jsonFile.toPath(), Utils.toJson(players));
         } catch (IOException e) {

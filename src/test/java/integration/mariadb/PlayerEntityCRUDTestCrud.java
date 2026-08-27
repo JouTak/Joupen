@@ -20,6 +20,9 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
         player.setLastProlongDate(LocalDateTime.now());
         player.setValidUntil(LocalDateTime.now().plusDays(30));
         player.setPaid(true);
+        player.setApproved(true);
+        player.setTemporaryAccessFrom(LocalDateTime.now().plusDays(1));
+        player.setTemporaryAccessUntil(LocalDateTime.now().plusDays(2));
 
         dslContext.transaction(configuration -> {
             DSL.using(configuration)
@@ -29,6 +32,9 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
                     .set(Players.PLAYERS.VALID_UNTIL, player.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, player.getLastProlongDate())
                     .set(Players.PLAYERS.PAID, player.getPaid())
+                    .set(Players.PLAYERS.APPROVED, player.getApproved())
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_FROM, player.getTemporaryAccessFrom())
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_UNTIL, player.getTemporaryAccessUntil())
                     .execute();
         });
 
@@ -40,6 +46,9 @@ public class PlayerEntityCRUDTestCrud extends BaseCrudMariaDBTest {
         assertEquals("TestPlayer", savedPlayer.getName());
         assertEquals(player.getUuid(), savedPlayer.getUuid());
         assertEquals(player.getPaid(), savedPlayer.getPaid());
+        assertEquals(player.getApproved(), savedPlayer.getApproved());
+        assertEquals(player.getTemporaryAccessFrom(), savedPlayer.getTemporaryAccessFrom());
+        assertEquals(player.getTemporaryAccessUntil(), savedPlayer.getTemporaryAccessUntil());
     }
 
     @Test

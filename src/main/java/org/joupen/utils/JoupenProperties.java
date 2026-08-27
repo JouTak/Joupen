@@ -18,6 +18,10 @@ public final class JoupenProperties {
     public static Boolean migrate = false;
     public static Boolean enabled = true;
     public static Map<String, Object> dbConfig;
+    public static String approvalRequiredMessage = "Сначала пройди тест на знание правил, чтобы получить доступ к серверу.";
+    public static String passRequiredMessage = "У тебя нет активной проходки.";
+    public static String invalidGiftMessage = "Ошибка: неверный формат подарка ({reward}). Обратись к EnderDiss'e";
+    public static String giftAppliedMessage = "Ура! Тебе добавили проходку: {duration}";
     public static boolean isInitialized = false;
 
     private static final List<ConfigConverter> CONVERTERS = List.of(
@@ -95,6 +99,12 @@ public final class JoupenProperties {
         log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}", playersFilepath, enabled,
                 useSql, migrate);
 
+        Map<String, Object> messages = getMap(config, "messages");
+        approvalRequiredMessage = String.valueOf(messages.getOrDefault("approval-required", approvalRequiredMessage));
+        passRequiredMessage = String.valueOf(messages.getOrDefault("pass-required", passRequiredMessage));
+        invalidGiftMessage = String.valueOf(messages.getOrDefault("invalid-gift", invalidGiftMessage));
+        giftAppliedMessage = String.valueOf(messages.getOrDefault("gift-applied", giftAppliedMessage));
+
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
             log.info("Database config: {}", dbConfig);
@@ -133,6 +143,11 @@ public final class JoupenProperties {
                   password: user_password
                   driverClassName: org.mariadb.jdbc.Driver
                   maximumPoolSize: 10
+                messages:
+                  approval-required: "Сначала пройди тест на знание правил, чтобы получить доступ к серверу."
+                  pass-required: "У тебя нет активной проходки."
+                  invalid-gift: "Ошибка: неверный формат подарка ({reward}). Обратись к EnderDiss'e"
+                  gift-applied: "Ура! Тебе добавили проходку: {duration}"
                 """;
         try {
             if (configFile.exists()) {
@@ -145,5 +160,14 @@ public final class JoupenProperties {
             log.error("Failed to create default config.yml: {} - {}", configFile.getAbsolutePath(), e.getMessage());
             throw new IllegalStateException("Failed to create default config.yml", e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> getMap(Map<String, Object> source, String key) {
+        Object value = source.get(key);
+        if (value instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+        return Map.of();
     }
 }
