@@ -25,4 +25,11 @@ public class PlayerDto {
     private LocalDateTime validUntil;
 
     private Boolean paid = true;
+
+    @Builder.Default
+    private Boolean approved = false;
+
+    private LocalDateTime temporaryAccessFrom;
+
+    private LocalDateTime temporaryAccessUntil;
 }

@@ -45,11 +45,17 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
                     .set(Players.PLAYERS.PAID, entity.getPaid())
+                    .set(Players.PLAYERS.APPROVED, Boolean.TRUE.equals(entity.getApproved()))
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_FROM, entity.getTemporaryAccessFrom())
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_UNTIL, entity.getTemporaryAccessUntil())
                     .onDuplicateKeyUpdate()
                     .set(Players.PLAYERS.NAME, entity.getName())
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
                     .set(Players.PLAYERS.PAID, entity.getPaid())
+                    .set(Players.PLAYERS.APPROVED, Boolean.TRUE.equals(entity.getApproved()))
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_FROM, entity.getTemporaryAccessFrom())
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_UNTIL, entity.getTemporaryAccessUntil())
                     .execute();
         });
     }
@@ -71,6 +77,9 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
                     .set(Players.PLAYERS.PAID, entity.getPaid())
+                    .set(Players.PLAYERS.APPROVED, Boolean.TRUE.equals(entity.getApproved()))
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_FROM, entity.getTemporaryAccessFrom())
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_UNTIL, entity.getTemporaryAccessUntil())
                     .where(Players.PLAYERS.NAME.eq(name))
                     .execute();
             if (rowsAffected == 0) {
@@ -90,6 +99,9 @@ public class PlayerRepositoryDbImpl implements PlayerRepository {
                     .set(Players.PLAYERS.VALID_UNTIL, entity.getValidUntil())
                     .set(Players.PLAYERS.LAST_PROLONG_DATE, entity.getLastProlongDate())
                     .set(Players.PLAYERS.PAID, entity.getPaid())
+                    .set(Players.PLAYERS.APPROVED, Boolean.TRUE.equals(entity.getApproved()))
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_FROM, entity.getTemporaryAccessFrom())
+                    .set(Players.PLAYERS.TEMPORARY_ACCESS_UNTIL, entity.getTemporaryAccessUntil())
                     .where(Players.PLAYERS.UUID.eq(uuid.toString()))
                     .execute();
             if (rowsAffected == 0) {
