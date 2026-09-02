@@ -26,6 +26,8 @@ public class HelpCommand implements GameCommand {
                 .append(Component.text(" - показывает эту страницу", NamedTextColor.DARK_GREEN)).appendNewline()
                 .append(Component.text("/joupen info [player]", NamedTextColor.GREEN))
                 .append(Component.text(" - инфо о проходке [другого игрока]", NamedTextColor.DARK_GREEN)).appendNewline()
+                .append(Component.text("/joupen link", NamedTextColor.GREEN))
+                .append(Component.text(" - выводит ссылку на оплату проходочки", NamedTextColor.DARK_GREEN)).appendNewline()
                 .appendNewline();
 
         if (sender.hasPermission("joupen.admin")){

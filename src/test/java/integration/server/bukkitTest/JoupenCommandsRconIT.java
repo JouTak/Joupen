@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class JoupenCommandsRconIT extends BasePurpurTest {
-    private static final String PLAYERS_JSON_CONTAINER_PATH = "/data/plugins/JoupenPlugin/player.json"
+    private static final String PLAYERS_JSON_CONTAINER_PATH = "/data/plugins/JoupenPlugin/player.json";
 
     @Override
     protected PurpurConfig configurePurpur() {
@@ -213,7 +213,7 @@ class JoupenCommandsRconIT extends BasePurpurTest {
             JsonObject player = players.get(i).getAsJsonObject();
             if (player.get("name").getAsString().equals(playerName)) {
                 found = true;
-                boolean paid = player.has("paid") ? player.get("paid").getAsBoolean() : true;
+                boolean paid = !player.has("paid") || player.get("paid").getAsBoolean();
                 assertEquals(shouldBePaid, paid,
                         "Игрок " + playerName + " должен иметь paid=" + shouldBePaid);
 
