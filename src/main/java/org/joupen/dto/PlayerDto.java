@@ -24,6 +24,7 @@ public class PlayerDto {
 
     private LocalDateTime validUntil;
 
+    @Builder.Default
     private Boolean paid = true;
 
     @Builder.Default
