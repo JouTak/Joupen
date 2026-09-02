@@ -33,6 +33,7 @@ public class PlayerJoinEventTest extends BaseTest {
 
     @BeforeEach
     void setUp() {
+        testsupport.OperationRepositoryMockSupport.enable(playerRepository);
         playerJoinEventHandler = new PlayerJoinEventHandler(playerRepository);
     }
 
@@ -122,7 +123,8 @@ public class PlayerJoinEventTest extends BaseTest {
         assertEquals(PlayerLoginEvent.Result.ALLOWED, event.getResult());
 
         verify(playerRepository).findByUuid(playerUuid);
-        verify(playerRepository).findByName(TEST_NAME);
+        verify(playerRepository, times(2)).findByName(TEST_NAME);
+        verify(playerRepository).applyOperation(eq(TEST_NAME), any(), anyString(), any());
         verifyNoMoreInteractions(playerRepository, transactionManager);
     }
 

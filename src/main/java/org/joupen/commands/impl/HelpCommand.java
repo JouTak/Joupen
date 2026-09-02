@@ -18,23 +18,44 @@ public class HelpCommand implements GameCommand {
 
     @Override
     public void execute() {
-        TextComponent text = Component.text()
+        TextComponent.Builder text = Component.text()
                 .append(Component.text("Joupen", NamedTextColor.GOLD)).appendNewline()
                 .append(Component.text("Вайтлист плагин для ДжоуТека", NamedTextColor.GOLD)).appendNewline()
-                .append(Component.text("Help:", NamedTextColor.DARK_GREEN)).appendNewline()
+                .append(Component.text("Инструкция:", NamedTextColor.DARK_GREEN)).appendNewline()
                 .append(Component.text("/joupen help", NamedTextColor.GREEN))
                 .append(Component.text(" - показывает эту страницу", NamedTextColor.DARK_GREEN)).appendNewline()
-                .append(Component.text("/joupen prolong <player|all> [duration]", NamedTextColor.GREEN))
-                .append(Component.text(" - продлевает игрока. Default: 1mo", NamedTextColor.DARK_GREEN)).appendNewline()
-                .append(Component.text("/joupen gift <player|all> [duration]", NamedTextColor.GREEN))
-                .append(Component.text(" - бесплатное продление. Default: 1mo", NamedTextColor.DARK_GREEN)).appendNewline()
                 .append(Component.text("/joupen info [player]", NamedTextColor.GREEN))
-                .append(Component.text(" - инфо о проходке (чужого — только админ)", NamedTextColor.DARK_GREEN)).appendNewline()
-                .append(Component.text("/joupen addAllToWhitelist <file> <days>", NamedTextColor.GREEN))
-                .append(Component.text(" - импорт никнеймов из файла", NamedTextColor.BLUE)).appendNewline()
-                .append(Component.text("Developed by Lapitaniy The Грыбник", NamedTextColor.DARK_AQUA))
-                .build();
+                .append(Component.text(" - инфо о проходке [другого игрока]", NamedTextColor.DARK_GREEN)).appendNewline()
+                .append(Component.text("/joupen link", NamedTextColor.GREEN))
+                .append(Component.text(" - выводит ссылку на оплату проходочки", NamedTextColor.DARK_GREEN)).appendNewline()
+                .appendNewline();
 
-        sender.sendMessage(text);
+        if (sender.hasPermission("joupen.admin")){
+            text
+                    .append(Component.text("/joupen prolong <player|all> [duration] [reason]", NamedTextColor.GREEN))
+                    .append(Component.text(" - продлить проходочку. Default: 1mo", NamedTextColor.DARK_GREEN)).appendNewline()
+                    .append(Component.text("/joupen gift <player|all> [duration] [reason]", NamedTextColor.GREEN))
+                    .append(Component.text(" - подарить проходочку. Default: 1mo", NamedTextColor.DARK_GREEN)).appendNewline()
+
+                    .append(Component.text("/joupen adjust <player> <+/-duration> [reason]", NamedTextColor.GREEN)).appendNewline()
+                    .append(Component.text("- скорректировать проходочку.", NamedTextColor.DARK_GREEN)).appendNewline()
+                    .append(Component.text("/joupen compensate <player> <duration> [reason]", NamedTextColor.GREEN)).appendNewline()
+                    .append(Component.text("- компенсировать проходочку.", NamedTextColor.DARK_GREEN)).appendNewline()
+                    .append(Component.text("/joupen undo <player> [last|id] [reason]", NamedTextColor.GREEN)).appendNewline()
+                    .append(Component.text("- отменить действие из истории.", NamedTextColor.DARK_GREEN)).appendNewline()
+                    .append(Component.text("/joupen history <player> [page]", NamedTextColor.GREEN)).appendNewline()
+                    .append(Component.text("- просмотреть историю действий.", NamedTextColor.DARK_GREEN)).appendNewline()
+                    .append(Component.text("/joupen addAllToWhitelist <file> <days>", NamedTextColor.GREEN))
+                    .append(Component.text(" - импорт никнеймов из файла", NamedTextColor.BLUE)).appendNewline()
+                    .appendNewline();
+        }
+        text.append(Component.text(
+                       "Developed by JouTak team: https://github.com/JouTak/Joupen", NamedTextColor.DARK_AQUA)
+                );
+
+
+
+
+        sender.sendMessage(text.build());
     }
 }

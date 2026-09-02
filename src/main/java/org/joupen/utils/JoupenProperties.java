@@ -100,6 +100,7 @@ public final class JoupenProperties {
                 useSql, migrate);
 
         Map<String, Object> messages = getMap(config, "messages");
+        OperationMessages.configure(messages);
         approvalRequiredMessage = String.valueOf(messages.getOrDefault("approval-required", approvalRequiredMessage));
         passRequiredMessage = String.valueOf(messages.getOrDefault("pass-required", passRequiredMessage));
         invalidGiftMessage = String.valueOf(messages.getOrDefault("invalid-gift", invalidGiftMessage));
@@ -148,7 +149,7 @@ public final class JoupenProperties {
                   pass-required: "У тебя нет активной проходки."
                   invalid-gift: "Ошибка: неверный формат подарка ({reward}). Обратись к EnderDiss'e"
                   gift-applied: "Ура! Тебе добавили проходку: {duration}"
-                """;
+                """ + OperationMessages.defaultsYaml();
         try {
             if (configFile.exists()) {
                 log.info("Config file already exists, skipping creation: {}", configFile.getAbsolutePath());

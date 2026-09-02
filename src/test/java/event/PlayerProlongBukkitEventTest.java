@@ -33,6 +33,7 @@ public class PlayerProlongBukkitEventTest {
     void setUp() {
         server = MockBukkit.mock();
         repo = mock(PlayerRepository.class);
+        testsupport.OperationRepositoryMockSupport.enable(repo);
         service = new PlayerService(repo);
     }
 

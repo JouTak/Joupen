@@ -8,22 +8,23 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.joupen.domain.PlayerEntity;
+import org.joupen.domain.OperationMetadata;
+import org.joupen.domain.OperationResult;
+import org.joupen.domain.OperationType;
 import org.joupen.repository.PlayerRepository;
 import org.joupen.service.AccessDecision;
 import org.joupen.service.PlayerAccessService;
+import org.joupen.service.PlayerOperationService;
+import org.joupen.service.GiftQueueFile;
 import org.joupen.utils.JoupenProperties;
 import org.joupen.utils.TimeUtils;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,10 +37,18 @@ public class PlayerJoinEventHandler implements Listener {
 
     private final PlayerRepository playerRepository;
     private final PlayerAccessService playerAccessService;
+    private final PlayerOperationService operations;
+    private final Path giftsFile;
 
     public PlayerJoinEventHandler(PlayerRepository playerRepository) {
+        this(playerRepository, Paths.get("plugins/joupen/gifts.txt"));
+    }
+
+    public PlayerJoinEventHandler(PlayerRepository playerRepository, Path giftsFile) {
         this.playerRepository = playerRepository;
         this.playerAccessService = new PlayerAccessService();
+        this.operations = new PlayerOperationService(playerRepository);
+        this.giftsFile = giftsFile;
     }
 
     @EventHandler
@@ -80,17 +89,8 @@ public class PlayerJoinEventHandler implements Listener {
         // Обновляем UUID и продлеваем подписку, если это первый вход
         UUID uuid = playerEntity.getUuid();
         if (uuid.equals(INITIAL_UUID.getUuid())) {
-            if (!hasPlayedBefore) {
-                LocalDateTime validUntil = playerEntity.getValidUntil()
-                        .plusDays(ChronoUnit.DAYS.between(playerEntity.getLastProlongDate(), now));
-
-                playerEntity.setValidUntil(validUntil);
-                playerEntity.setLastProlongDate(now);
-            }
-            playerEntity.setUuid(player.getUniqueId());
-
             try {
-                playerRepository.updateByName(playerEntity, player.getName());
+                operations.bindOnLogin(playerEntity.getName(), player.getUniqueId(), hasPlayedBefore);
                 log.info("Updated UUID for player {} to {}",
                         playerEntity.getName(), player.getUniqueId());
             } catch (Exception e) {
@@ -107,17 +107,15 @@ public class PlayerJoinEventHandler implements Listener {
      * Если формат подарка некорректный — игроку выводится сообщение, но он не кикается.
      */
     private void checkGiftFile(Player player) {
-        Path giftsFile = Paths.get("plugins/joupen/gifts.txt");
         if (!Files.exists(giftsFile)) return;
 
         List<String> updatedLines = new ArrayList<>();
         boolean rewarded = false;
 
-        try (BufferedReader reader = Files.newBufferedReader(giftsFile, StandardCharsets.UTF_8)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            for (String line : GiftQueueFile.read(giftsFile, 2)) {
                 String[] parts = line.trim().split("\\s+");
-                if (parts.length != 2) {
+                if (parts.length != 3) {
                     updatedLines.add(line);
                     continue;
                 }
@@ -129,7 +127,7 @@ public class PlayerJoinEventHandler implements Listener {
                     Duration duration;
                     try {
                         duration = TimeUtils.parseDuration(reward);
-                    } catch (IllegalArgumentException e) {
+                    } catch (IllegalArgumentException | ArithmeticException e) {
                         log.error("Invalid gift '{}' for player {}", reward, nick);
                         player.sendMessage(Component.text(
                                 JoupenProperties.invalidGiftMessage.replace("{reward}", reward),
@@ -139,27 +137,17 @@ public class PlayerJoinEventHandler implements Listener {
                         continue;
                     }
 
-                    LocalDateTime now = LocalDateTime.now();
-                    Optional<PlayerEntity> optionalEntity = playerRepository.findByName(nick);
-
-                    PlayerEntity entity;
-                    if (optionalEntity.isPresent()) {
-                        entity = optionalEntity.get();
-                        LocalDateTime base = entity.getValidUntil().isBefore(now) ? now : entity.getValidUntil();
-                        entity.setValidUntil(base.plus(duration));
-                        entity.setUuid(player.getUniqueId());
-                        playerRepository.updateByName(entity, nick);
-                    } else {
-                        entity = new PlayerEntity();
-                        entity.setName(nick);
-                        entity.setUuid(player.getUniqueId());
-                        entity.setValidUntil(now.plus(duration));
-                        entity.setLastProlongDate(now.minusDays(1));
-                        entity.setPaid(false);
-                        playerRepository.save(entity);
+                    OperationResult result;
+                    try {
+                        result = operations.grant(nick, duration, OperationType.GIFT,
+                                new OperationMetadata(null, "gift-file", null, parts[2]), player.getUniqueId());
+                    } catch (RuntimeException e) {
+                        log.error("Failed to apply gift for {}", nick, e);
+                        updatedLines.add(line);
+                        continue;
                     }
 
-                    player.sendMessage(Component.text(
+                    if (result.applied()) player.sendMessage(Component.text(
                             JoupenProperties.giftAppliedMessage.replace(
                                     "{duration}",
                                     TimeUtils.formatDuration(duration)
@@ -179,7 +167,7 @@ public class PlayerJoinEventHandler implements Listener {
 
         if (rewarded) {
             try {
-                Files.write(giftsFile, updatedLines, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+                GiftQueueFile.write(giftsFile, updatedLines);
             } catch (IOException e) {
                 log.error("Error writing gifts.txt: {}", e.getMessage());
             }

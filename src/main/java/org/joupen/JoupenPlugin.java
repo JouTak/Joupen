@@ -30,6 +30,7 @@ public class JoupenPlugin extends JavaPlugin {
     private DatabaseManager databaseManager;
     private TransactionManager transactionManager;
     private ScheduledGiftService scheduledGiftService;
+    private PlayerService playerService;
 
     @Override
     public void onEnable() {
@@ -71,7 +72,7 @@ public class JoupenPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinEventHandler(playerRepository), this);
 
         EventUtils.register(PlayerProlongedEvent.class, new PlayerProlongedBroadcastListener());
-        PlayerService playerService = new PlayerService(playerRepository);
+        playerService = new PlayerService(playerRepository);
         Path scheduledGiftsPath = this.getDataFolder().toPath().resolve("scheduled-gifts.txt");
         scheduledGiftService = new ScheduledGiftService(this, playerService, scheduledGiftsPath);
         scheduledGiftService.start();

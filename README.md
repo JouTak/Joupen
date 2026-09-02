@@ -1,6 +1,8 @@
 # Joupen 
 whitelist  plugin for JouTak <ins>(mc.joutak.ru)</ins>
 
+[История операций, adjust и undo](docs/operations.md)
+
 **Описание:**  
 Joupen — это плагин для управления вайтлистом на сервере Minecraft. Плагин позволяет:
 

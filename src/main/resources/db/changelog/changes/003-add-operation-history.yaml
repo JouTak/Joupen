@@ -1,0 +1,101 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-operation-history
+      author: joutak
+      changes:
+        - createTable:
+            tableName: operation_lock
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+        - insert:
+            tableName: operation_lock
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1
+        - createTable:
+            tableName: player_operations
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: player_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: player_name
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: duration_seconds
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: occurred_at
+                  type: DATETIME
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: VARCHAR(1000)
+              - column:
+                  name: source
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: initiator
+                  type: VARCHAR(128)
+              - column:
+                  name: external_id
+                  type: VARCHAR(255)
+              - column:
+                  name: external_key
+                  type: VARCHAR(64)
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uq_player_operations_external_key
+              - column:
+                  name: request
+                  type: VARCHAR(2000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reversed_operation_id
+                  type: BIGINT
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uq_player_operations_reversal
+              - column:
+                  name: state_before
+                  type: LONGTEXT
+              - column:
+                  name: state_after
+                  type: LONGTEXT
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: player_operations
+            indexName: idx_player_operations_player
+            columns:
+              - column:
+                  name: player_id
+              - column:
+                  name: id

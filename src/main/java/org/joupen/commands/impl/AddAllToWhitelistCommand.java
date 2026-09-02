@@ -7,6 +7,7 @@ import org.joupen.commands.BuildContext;
 import org.joupen.commands.CommandAlias;
 import org.joupen.commands.GameCommand;
 import org.joupen.domain.PlayerEntity;
+import org.joupen.domain.OperationMetadata;
 import org.joupen.messaging.Messaging;
 import org.joupen.service.PlayerImportService;
 import org.joupen.service.PlayerService;
@@ -48,7 +49,7 @@ public class AddAllToWhitelistCommand implements GameCommand {
 
         try {
             List<PlayerEntity> imported = importService.buildNewPlayerFromFileWithNames(path, days);
-            playerService.addAll(imported);
+            playerService.addAll(imported, new OperationMetadata(path.toString(), "import", sender.getName(), null));
 
             Messaging.reply(sender, Component.text("Импортировано " + imported.size() + " игроков из " + path, NamedTextColor.GREEN));
         } catch (Exception e) {
