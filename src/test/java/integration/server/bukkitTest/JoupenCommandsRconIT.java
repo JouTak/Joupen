@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class JoupenCommandsRconIT extends BasePurpurTest {
+    private static final String PLAYERS_JSON_CONTAINER_PATH = "/data/plugins/JoupenPlugin/player.json"
 
     @Override
     protected PurpurConfig configurePurpur() {
@@ -93,10 +94,8 @@ class JoupenCommandsRconIT extends BasePurpurTest {
 
         System.out.println("📋 Prolong response: " + response);
 
-        Path playersFile = getPlayersJsonPath();
-        assertTrue(Files.exists(playersFile), "players.json должен существовать");
+        String content = readPlayersJson();
 
-        String content = Files.readString(playersFile);
         assertTrue(content.contains("TestPlayer"), "players.json должен содержать TestPlayer");
         System.out.println("✅ File: TestPlayer найден в players.json");
     }
@@ -180,8 +179,7 @@ class JoupenCommandsRconIT extends BasePurpurTest {
     @Order(10)
     @DisplayName("players.json should have exactly 2 players")
     void fileShouldHaveTwoPlayers() throws IOException {
-        Path playersFile = getPlayersJsonPath();
-        String content = Files.readString(playersFile);
+        String content = readPlayersJson();
 
         Gson gson = new Gson();
         JsonArray players = gson.fromJson(content, JsonArray.class);
@@ -191,18 +189,22 @@ class JoupenCommandsRconIT extends BasePurpurTest {
         System.out.println("✅ File: Найдено " + players.size() + " игроков");
     }
 
-    private Path getPlayersJsonPath() {
-        // Файл создаётся плагином внутри контейнера в
-        // /data/plugins/JoupenPlugin/player.json
-        // Директория /data bind-mounted к purpurCacheDir на хосте
-        return purpurCacheDir.resolve("plugins").resolve("JoupenPlugin").resolve("player.json");
+    private String readPlayersJson() throws IOException {
+        Path tempFile = Files.createTempFile("joupen-player",".json");
+
+        try{
+            purpur.copyFileFromContainer(
+                    PLAYERS_JSON_CONTAINER_PATH,
+                    tempFile.toString()
+            );
+            return Files.readString(tempFile);
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
     }
 
     private void verifyPlayerInFile(String playerName, boolean shouldBePaid) throws IOException {
-        Path playersFile = getPlayersJsonPath();
-        assertTrue(Files.exists(playersFile), "players.json должен существовать");
-
-        String content = Files.readString(playersFile);
+        String content = readPlayersJson();
         Gson gson = new Gson();
         JsonArray players = gson.fromJson(content, JsonArray.class);
 
