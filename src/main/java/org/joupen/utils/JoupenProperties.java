@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.joupen.utils.config.ConfigConverter;
 import org.joupen.utils.config.DatabaseConfigConverter;
+import org.joupen.utils.config.LegacyDataMigrationConverter;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,17 +16,18 @@ public final class JoupenProperties {
 
     public static String playersFilepath;
     public static Boolean useSql = false;
-    public static Boolean migrate = false;
     public static Boolean enabled = true;
     public static Map<String, Object> dbConfig;
     public static String approvalRequiredMessage = "Сначала пройди тест на знание правил, чтобы получить доступ к серверу.";
     public static String passRequiredMessage = "У тебя нет активной проходки.";
     public static String invalidGiftMessage = "Ошибка: неверный формат подарка ({reward}). Обратись к EnderDiss'e";
     public static String giftAppliedMessage = "Ура! Тебе добавили проходку: {duration}";
+    public static String accessCheckFailedMessage = "Не удалось проверить доступ. Попробуй зайти позже.";
     public static boolean isInitialized = false;
 
     private static final List<ConfigConverter> CONVERTERS = List.of(
-            new DatabaseConfigConverter());
+            new DatabaseConfigConverter(),
+            new LegacyDataMigrationConverter());
 
     private JoupenProperties() {
     }
@@ -93,11 +95,9 @@ public final class JoupenProperties {
                 .getPath();
 
         useSql = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("useSql", false)));
-        migrate = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("migrate", false)));
         enabled = Boolean.parseBoolean(String.valueOf(pluginConfig.getOrDefault("enabled", true)));
 
-        log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}, migrate={}", playersFilepath, enabled,
-                useSql, migrate);
+        log.info("Plugin config: playersFilepath={}, enabled={}, useSql={}", playersFilepath, enabled, useSql);
 
         Map<String, Object> messages = getMap(config, "messages");
         OperationMessages.configure(messages);
@@ -105,6 +105,7 @@ public final class JoupenProperties {
         passRequiredMessage = String.valueOf(messages.getOrDefault("pass-required", passRequiredMessage));
         invalidGiftMessage = String.valueOf(messages.getOrDefault("invalid-gift", invalidGiftMessage));
         giftAppliedMessage = String.valueOf(messages.getOrDefault("gift-applied", giftAppliedMessage));
+        accessCheckFailedMessage = String.valueOf(messages.getOrDefault("access-check-failed", accessCheckFailedMessage));
 
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
@@ -137,7 +138,6 @@ public final class JoupenProperties {
                   enabled: true
                   playersFile: player.json
                   useSql: false
-                  migrate: false
                 database:
                   jdbcUrl: jdbc:mariadb://localhost:3306/mydb
                   username: user
@@ -149,6 +149,7 @@ public final class JoupenProperties {
                   pass-required: "У тебя нет активной проходки."
                   invalid-gift: "Ошибка: неверный формат подарка ({reward}). Обратись к EnderDiss'e"
                   gift-applied: "Ура! Тебе добавили проходку: {duration}"
+                  access-check-failed: "Не удалось проверить доступ. Попробуй зайти позже."
                 """ + OperationMessages.defaultsYaml();
         try {
             if (configFile.exists()) {
