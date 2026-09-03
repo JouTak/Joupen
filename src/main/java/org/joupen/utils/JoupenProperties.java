@@ -80,7 +80,7 @@ public final class JoupenProperties {
             }
         }
 
-        log.info("Loaded config:\n{}", config);
+        log.info("Config loaded successfully");
 
         applyConfig(config, configDir);
     }
@@ -108,7 +108,7 @@ public final class JoupenProperties {
 
         if (useSql) {
             dbConfig = (Map<String, Object>) config.getOrDefault("database", Map.of());
-            log.info("Database config: {}", dbConfig);
+            log.info("Database config loaded");
         } else {
             dbConfig = null;
             log.info("SQL disabled, dbConfig set to null");
