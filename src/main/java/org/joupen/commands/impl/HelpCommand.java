@@ -32,11 +32,12 @@ public class HelpCommand implements GameCommand {
 
         if (sender.hasPermission("joupen.admin")){
             text
+                    .append(Component.text("/joupen approve <player> [reason]", NamedTextColor.GREEN)).appendNewline()
+                    .append(Component.text("- подтвердить игрока.", NamedTextColor.DARK_GREEN)).appendNewline()
                     .append(Component.text("/joupen prolong <player|all> [duration] [reason]", NamedTextColor.GREEN))
                     .append(Component.text(" - продлить проходочку. Default: 1mo", NamedTextColor.DARK_GREEN)).appendNewline()
                     .append(Component.text("/joupen gift <player|all> [duration] [reason]", NamedTextColor.GREEN))
                     .append(Component.text(" - подарить проходочку. Default: 1mo", NamedTextColor.DARK_GREEN)).appendNewline()
-
                     .append(Component.text("/joupen adjust <player> <+/-duration> [reason]", NamedTextColor.GREEN)).appendNewline()
                     .append(Component.text("- скорректировать проходочку.", NamedTextColor.DARK_GREEN)).appendNewline()
                     .append(Component.text("/joupen compensate <player> <duration> [reason]", NamedTextColor.GREEN)).appendNewline()
