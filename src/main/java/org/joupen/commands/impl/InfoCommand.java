@@ -126,7 +126,7 @@ public class InfoCommand implements GameCommand, CommandValidator {
 
         LocalDateTime temporaryAccessFrom = dto.getTemporaryAccessFrom();
         LocalDateTime temporaryAccessUntil = dto.getTemporaryAccessUntil();
-        boolean hasWindow = temporaryAccessFrom != null && temporaryAccessUntil != null;
+        boolean hasWindow = (temporaryAccessFrom != null && temporaryAccessUntil != null) && (temporaryAccessUntil.isAfter(now));
         if (hasWindow) {
             textComponent
                     .append(Component.text("Бесплатный доступ: "))
