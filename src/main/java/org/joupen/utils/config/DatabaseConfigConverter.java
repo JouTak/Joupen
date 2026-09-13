@@ -28,6 +28,12 @@ public class DatabaseConfigConverter implements ConfigConverter {
                 dbConfig.put("maximumPoolSize", dbConfig.remove("maxPoolSize"));
                 changed = true;
             }
+            for (String property : new String[]{"dialect", "hbm2ddl", "showSql", "formatSql"}) {
+                if (dbConfig.containsKey(property)) {
+                    dbConfig.remove(property);
+                    changed = true;
+                }
+            }
         }
 
         return changed;

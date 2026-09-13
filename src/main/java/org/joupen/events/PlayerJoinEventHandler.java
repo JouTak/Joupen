@@ -53,6 +53,16 @@ public class PlayerJoinEventHandler implements Listener {
 
     @EventHandler
     public void playerJoinEvent(PlayerLoginEvent playerLoginEvent) {
+        try {
+            handleLogin(playerLoginEvent);
+        } catch (RuntimeException e) {
+            log.error("Failed to check access for {}", playerLoginEvent.getPlayer().getName(), e);
+            playerLoginEvent.disallow(PlayerLoginEvent.Result.KICK_OTHER,
+                    Component.text(JoupenProperties.accessCheckFailedMessage, NamedTextColor.RED));
+        }
+    }
+
+    private void handleLogin(PlayerLoginEvent playerLoginEvent) {
         Player player = playerLoginEvent.getPlayer();
 
         // Проверяем подарки, но не кикаем при ошибках формата

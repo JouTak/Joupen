@@ -26,8 +26,14 @@ public class DatabaseManager implements AutoCloseable {
         HikariConfig config = new HikariConfig(props);
 
         this.dataSource = new HikariDataSource(config);
-        var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
-        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB, settings);
+        try {
+            new DatabaseSchemaManager(dataSource).migrate();
+            var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
+            this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB, settings);
+        } catch (RuntimeException e) {
+            dataSource.close();
+            throw e;
+        }
         log.info("DatabaseManager initialized with jOOQ for MariaDB");
     }
 
