@@ -75,30 +75,67 @@ public class InfoCommand implements GameCommand, CommandValidator {
                 .clickEvent(ClickEvent.copyToClipboard(dto.getUuid().toString()))
                 .hoverEvent(Component.text("Нажми, чтобы скопировать UUID", NamedTextColor.GRAY));
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime validUntil = dto.getValidUntil();
-        LocalDateTime lastProlong = dto.getLastProlongDate();
-
-        TimeUtils.PassProgress progress = TimeUtils.calculatePassProgress(now, lastProlong, validUntil);
-
-        String validUntilText = validUntil.format(FMT)
-                + " (" + progress.getDaysRemaining() + " дн., " + progress.getPercent() + "%)";
-
-        TextComponent textComponent = Component.text()
+        TextComponent.Builder textComponent = Component.text()
                 .append(Component.text(self ? "Твой Ник: " : "Ник Игрока: ", NamedTextColor.GREEN))
                 .append(nameComponent)
                 .appendNewline()
                 .append(Component.text(self ? "Твой UUID: " : "UUID Игрока: ", NamedTextColor.GREEN))
                 .append(uuidComponent)
-                .appendNewline()
-                .append(Component.text("Последняя дата продления проходки: ", NamedTextColor.GREEN))
-                .append(Component.text(lastProlong.format(FMT), NamedTextColor.DARK_GREEN))
-                .appendNewline()
-                .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
-                .append(Component.text(validUntilText, NamedTextColor.DARK_GREEN))
-                .build();
+                .appendNewline();
 
-        Messaging.reply(sender, textComponent);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastProlong = dto.getLastProlongDate();
+        LocalDateTime validUntil = dto.getValidUntil();
+        boolean hasValidUntil = validUntil != null;
+        boolean hasLastProlong = lastProlong != null;
+        if (hasLastProlong){
+            textComponent
+                    .append(Component.text(hasValidUntil ? "Последняя дата продления проходки: " : "Последнее редактирование записи: ", NamedTextColor.GREEN))
+                    .append(Component.text(lastProlong.format(FMT), NamedTextColor.DARK_GREEN))
+                    .appendNewline();
+
+            if (hasValidUntil) {
+                TimeUtils.PassProgress progress = TimeUtils.calculatePassProgress(now, lastProlong, validUntil);
+                String validUntilText = validUntil.format(FMT)
+                        + " (" + progress.getDaysRemaining() + " дн., " + progress.getPercent() + "%)";
+                textComponent
+                        .append(Component.text("Проходка активна до: ", NamedTextColor.GREEN))
+                        .append(Component.text(validUntilText, NamedTextColor.DARK_GREEN))
+                        .appendNewline();
+            }
+            else{
+                textComponent
+                        .append(Component.text("Не имеет активной проходки", NamedTextColor.GREEN))
+                        .appendNewline();
+            }
+        }
+        else{
+            textComponent
+                    .append(Component.text("Неизвестна дата редактирования проходки", NamedTextColor.GREEN))
+                    .appendNewline();
+        }
+
+
+
+        boolean approved = Boolean.TRUE.equals(dto.getApproved());
+        textComponent.append(Component.text(
+                        approved ? "Подтверждён": "Не подтверждён",
+                        approved ? NamedTextColor.GREEN : NamedTextColor.RED
+        ))
+                .appendNewline();
+
+        LocalDateTime temporaryAccessFrom = dto.getTemporaryAccessFrom();
+        LocalDateTime temporaryAccessUntil = dto.getTemporaryAccessUntil();
+        boolean hasWindow = temporaryAccessFrom != null && temporaryAccessUntil != null;
+        if (hasWindow) {
+            textComponent
+                    .append(Component.text("Бесплатный доступ: "))
+                    .append(Component.text(temporaryAccessFrom.format(FMT), NamedTextColor.GREEN))
+                    .append(Component.text("--"))
+                    .append(Component.text(temporaryAccessUntil.format(FMT), NamedTextColor.GREEN));
+        }
+
+        Messaging.reply(sender, textComponent.build());
         log.info("Displayed info for player {} to {}", targetName, sender.getName());
     }
 }
