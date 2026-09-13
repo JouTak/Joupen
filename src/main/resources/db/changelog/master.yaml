@@ -2,3 +2,9 @@ databaseChangeLog:
   - include:
       file: changes/001-create-users-table.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/002-add-access-fields.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-add-operation-history.yaml
+      relativeToChangelogFile: true

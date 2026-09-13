@@ -5,9 +5,10 @@ import org.joupen.dto.PlayerDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
-
 @Mapper(componentModel = "default")
 public interface PlayerMapper {
+
+    PlayerMapper INSTANCE = new PlayerMapperImpl();
 
     PlayerDto entityToDto(PlayerEntity source);
 
@@ -15,4 +16,3 @@ public interface PlayerMapper {
 
     void updateEntityFromDto(PlayerDto dto, @MappingTarget PlayerEntity entity);
 }
-

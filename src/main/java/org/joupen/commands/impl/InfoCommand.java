@@ -17,7 +17,6 @@ import org.joupen.repository.PlayerRepository;
 import org.joupen.utils.TimeUtils;
 import org.joupen.validation.CommandValidator;
 import org.joupen.validation.Validator;
-import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,7 +39,7 @@ public class InfoCommand implements GameCommand, CommandValidator {
         this.repo = buildContext.getPlayerRepository();
         this.mapper = buildContext.getPlayerMapper() != null
                 ? buildContext.getPlayerMapper()
-                : Mappers.getMapper(PlayerMapper.class);
+                : PlayerMapper.INSTANCE;
 
         String[] args = buildContext.getArgs();
         this.targetName = args.length == 0 ? buildContext.getSender().getName() : args[0];

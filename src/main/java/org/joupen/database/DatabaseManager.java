@@ -18,15 +18,22 @@ public class DatabaseManager implements AutoCloseable {
     private final DSLContext dslContext;
 
     public DatabaseManager() {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl((String) JoupenProperties.dbConfig.get("url"));
-        config.setUsername((String) JoupenProperties.dbConfig.get("user"));
-        config.setPassword((String) JoupenProperties.dbConfig.get("password"));
-        config.setDriverClassName((String) JoupenProperties.dbConfig.get("driver"));
-        config.setMaximumPoolSize(10);
+        java.util.Properties props = new java.util.Properties();
+        if (JoupenProperties.dbConfig != null) {
+            props.putAll(JoupenProperties.dbConfig);
+        }
+
+        HikariConfig config = new HikariConfig(props);
+
         this.dataSource = new HikariDataSource(config);
-        var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
-        this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB, settings);
+        try {
+            new DatabaseSchemaManager(dataSource).migrate();
+            var settings = new Settings().withRenderNameCase(RenderNameCase.LOWER);
+            this.dslContext = DSL.using(dataSource, SQLDialect.MARIADB, settings);
+        } catch (RuntimeException e) {
+            dataSource.close();
+            throw e;
+        }
         log.info("DatabaseManager initialized with jOOQ for MariaDB");
     }
 

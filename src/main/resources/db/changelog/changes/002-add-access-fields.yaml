@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-add-access-fields
+      author: joutak
+      changes:
+        - addColumn:
+            tableName: players
+            columns:
+              - column:
+                  name: approved
+                  type: BOOLEAN
+              - column:
+                  name: temporary_access_from
+                  type: DATETIME
+              - column:
+                  name: temporary_access_until
+                  type: DATETIME
+        - update:
+            tableName: players
+            columns:
+              - column:
+                  name: approved
+                  valueBoolean: true
+            where: approved IS NULL
+        - addNotNullConstraint:
+            tableName: players
+            columnName: approved
+            columnDataType: BOOLEAN
+        - addDefaultValue:
+            tableName: players
+            columnName: approved
+            columnDataType: BOOLEAN
+            defaultValueBoolean: false

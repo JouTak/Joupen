@@ -33,11 +33,12 @@ public class PlayerJoinEventTest extends BaseTest {
 
     @BeforeEach
     void setUp() {
+        testsupport.OperationRepositoryMockSupport.enable(playerRepository);
         playerJoinEventHandler = new PlayerJoinEventHandler(playerRepository);
     }
 
     @Test
-    void playerNotInDatabaseOrFile_ShouldKickWithWhitelistMessage() {
+    void playerNotInDatabaseOrFile_shouldRequireApproval() {
         String newUnknownName = "UnknownPlayer";
         player.setName(newUnknownName);
         UUID playerUuid = player.getUniqueId();
@@ -49,7 +50,7 @@ public class PlayerJoinEventTest extends BaseTest {
         playerJoinEventHandler.playerJoinEvent(event);
 
         assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
-        assertTrue(event.getKickMessage().contains("Тебя нет в вайтлисте"));
+        assertTrue(event.getKickMessage().contains("пройди тест"));
 
         verify(playerRepository).findByUuid(playerUuid);
         verify(playerRepository).findByName(newUnknownName);
@@ -58,7 +59,7 @@ public class PlayerJoinEventTest extends BaseTest {
     }
 
     @Test
-    void playerInDatabaseWithExpiredSubscription_ShouldKickWithExpiredMessage() {
+    void approvedPlayerWithExpiredSubscription_shouldRequirePass() {
         UUID playerUuid = player.getUniqueId();
         PlayerEntity playerEntity = new PlayerEntity();
         playerEntity.setUuid(playerUuid);
@@ -66,6 +67,7 @@ public class PlayerJoinEventTest extends BaseTest {
         playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
         playerEntity.setLastProlongDate(LocalDateTime.now().minusDays(30));
         playerEntity.setPaid(true);
+        playerEntity.setApproved(true);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
 
@@ -73,7 +75,7 @@ public class PlayerJoinEventTest extends BaseTest {
         playerJoinEventHandler.playerJoinEvent(event);
 
         assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
-        assertTrue(event.getKickMessage().contains("Проходка кончилась"));
+        assertTrue(event.getKickMessage().contains("нет активной проходки"));
 
         verify(playerRepository).findByUuid(playerUuid);
         verifyNoInteractions(transactionManager);
@@ -92,6 +94,7 @@ public class PlayerJoinEventTest extends BaseTest {
         playerEntity.setValidUntil(validUntil);
         playerEntity.setLastProlongDate(lastProlongDate);
         playerEntity.setPaid(true);
+        playerEntity.setApproved(true);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.empty());
         when(playerRepository.findByName(TEST_NAME)).thenReturn(Optional.of(playerEntity));
@@ -120,7 +123,8 @@ public class PlayerJoinEventTest extends BaseTest {
         assertEquals(PlayerLoginEvent.Result.ALLOWED, event.getResult());
 
         verify(playerRepository).findByUuid(playerUuid);
-        verify(playerRepository).findByName(TEST_NAME);
+        verify(playerRepository, times(2)).findByName(TEST_NAME);
+        verify(playerRepository).applyOperation(eq(TEST_NAME), any(), anyString(), any());
         verifyNoMoreInteractions(playerRepository, transactionManager);
     }
 
@@ -133,6 +137,7 @@ public class PlayerJoinEventTest extends BaseTest {
         playerEntity.setValidUntil(LocalDateTime.now().plusDays(10));
         playerEntity.setLastProlongDate(LocalDateTime.now().minusDays(20));
         playerEntity.setPaid(true);
+        playerEntity.setApproved(true);
 
         when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
 
@@ -144,5 +149,99 @@ public class PlayerJoinEventTest extends BaseTest {
         verify(playerRepository).findByUuid(playerUuid);
         verifyNoInteractions(transactionManager);
         verifyNoMoreInteractions(playerRepository);
+    }
+
+    @Test
+    void unapprovedPlayerWithActivePass_shouldRequireApproval() {
+        UUID playerUuid = player.getUniqueId();
+        PlayerEntity playerEntity = new PlayerEntity();
+        playerEntity.setUuid(playerUuid);
+        playerEntity.setName(TEST_NAME);
+        playerEntity.setValidUntil(LocalDateTime.now().plusDays(10));
+        playerEntity.setApproved(false);
+
+        when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
+
+        PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", Objects.requireNonNull(player.getAddress()).getAddress());
+        playerJoinEventHandler.playerJoinEvent(event);
+
+        assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
+        assertTrue(event.getKickMessage().contains("пройди тест"));
+    }
+
+    @Test
+    void returningPlayerWithTemporaryAccess_shouldAllowLogin() {
+        UUID playerUuid = player.getUniqueId();
+        player.disconnect();
+        player.reconnect();
+
+        PlayerEntity playerEntity = new PlayerEntity();
+        playerEntity.setUuid(playerUuid);
+        playerEntity.setName(TEST_NAME);
+        playerEntity.setApproved(true);
+        playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
+        playerEntity.setTemporaryAccessFrom(LocalDateTime.now().minusHours(1));
+        playerEntity.setTemporaryAccessUntil(LocalDateTime.now().plusHours(1));
+
+        when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
+
+        PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", Objects.requireNonNull(player.getAddress()).getAddress());
+        playerJoinEventHandler.playerJoinEvent(event);
+
+        assertTrue(player.hasPlayedBefore());
+        assertEquals(PlayerLoginEvent.Result.ALLOWED, event.getResult());
+    }
+
+    @Test
+    void newPlayerWithTemporaryAccess_shouldRequirePass() {
+        UUID playerUuid = player.getUniqueId();
+        PlayerEntity playerEntity = new PlayerEntity();
+        playerEntity.setUuid(playerUuid);
+        playerEntity.setName(TEST_NAME);
+        playerEntity.setApproved(true);
+        playerEntity.setValidUntil(LocalDateTime.now().minusDays(1));
+        playerEntity.setTemporaryAccessFrom(LocalDateTime.now().minusHours(1));
+        playerEntity.setTemporaryAccessUntil(LocalDateTime.now().plusHours(1));
+
+        when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.of(playerEntity));
+
+        PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", Objects.requireNonNull(player.getAddress()).getAddress());
+        playerJoinEventHandler.playerJoinEvent(event);
+
+        assertEquals(PlayerLoginEvent.Result.KICK_WHITELIST, event.getResult());
+        assertTrue(event.getKickMessage().contains("нет активной проходки"));
+    }
+
+    @Test
+    void returningPlayerWithTemporaryAccess_shouldNotExtendExpiredPass() {
+        UUID playerUuid = player.getUniqueId();
+        player.disconnect();
+        player.reconnect();
+
+        LocalDateTime validUntil = LocalDateTime.now().minusDays(10);
+        LocalDateTime lastProlongDate = LocalDateTime.now().minusDays(40);
+        PlayerEntity playerEntity = new PlayerEntity();
+        playerEntity.setUuid(INITIAL_UUID.getUuid());
+        playerEntity.setName(TEST_NAME);
+        playerEntity.setApproved(true);
+        playerEntity.setValidUntil(validUntil);
+        playerEntity.setLastProlongDate(lastProlongDate);
+        playerEntity.setTemporaryAccessFrom(LocalDateTime.now().minusHours(1));
+        playerEntity.setTemporaryAccessUntil(LocalDateTime.now().plusHours(1));
+
+        when(playerRepository.findByUuid(playerUuid)).thenReturn(Optional.empty());
+        when(playerRepository.findByName(TEST_NAME)).thenReturn(Optional.of(playerEntity));
+
+        PlayerLoginEvent event = new PlayerLoginEvent(player, "localhost", Objects.requireNonNull(player.getAddress()).getAddress());
+        playerJoinEventHandler.playerJoinEvent(event);
+
+        ArgumentCaptor<PlayerEntity> playerCaptor = ArgumentCaptor.forClass(PlayerEntity.class);
+        verify(playerRepository).updateByName(playerCaptor.capture(), eq(TEST_NAME));
+        PlayerEntity updatedPlayer = playerCaptor.getValue();
+
+        assertEquals(PlayerLoginEvent.Result.ALLOWED, event.getResult());
+        assertEquals(playerUuid, updatedPlayer.getUuid());
+        assertEquals(validUntil, updatedPlayer.getValidUntil());
+        assertEquals(lastProlongDate, updatedPlayer.getLastProlongDate());
     }
 }

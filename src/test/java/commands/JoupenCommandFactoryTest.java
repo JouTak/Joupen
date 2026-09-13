@@ -29,6 +29,7 @@ public class JoupenCommandFactoryTest {
 
     @BeforeEach
     void setUp() {
+        org.joupen.utils.ReflectionUtils.init();
         repo = mock(PlayerRepository.class);
         playerService = mock(PlayerService.class);
         inbox = new ArrayList<>();

@@ -33,6 +33,7 @@ public class PlayerServiceTest {
         server = MockBukkit.mock();
         EventUtils.reset();
         repo = mock(PlayerRepository.class);
+        testsupport.OperationRepositoryMockSupport.enable(repo);
         service = new PlayerService(repo);
     }
 

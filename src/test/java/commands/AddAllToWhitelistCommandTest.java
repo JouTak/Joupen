@@ -44,6 +44,7 @@ public class AddAllToWhitelistCommandTest {
     void setUp() {
         server = MockBukkit.mock();
         repo = mock(PlayerRepository.class);
+        testsupport.OperationRepositoryMockSupport.enable(repo);
         playerService = new PlayerService(repo);
         sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Admin");

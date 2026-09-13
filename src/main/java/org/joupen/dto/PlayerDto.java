@@ -1,6 +1,5 @@
 package org.joupen.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,11 +20,17 @@ public class PlayerDto {
 
     private UUID uuid;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime lastProlongDate;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime validUntil;
 
+    @Builder.Default
     private Boolean paid = true;
+
+    @Builder.Default
+    private Boolean approved = false;
+
+    private LocalDateTime temporaryAccessFrom;
+
+    private LocalDateTime temporaryAccessUntil;
 }

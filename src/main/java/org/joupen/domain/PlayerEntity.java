@@ -19,12 +19,16 @@ public class PlayerEntity {
     private LocalDateTime validUntil;
     private LocalDateTime lastProlongDate;
     private Boolean paid;
+    private Boolean approved;
+    private LocalDateTime temporaryAccessFrom;
+    private LocalDateTime temporaryAccessUntil;
+
+    public PlayerEntity(Long id, UUID uuid, String name, LocalDateTime validUntil, LocalDateTime lastProlongDate,
+                        Boolean paid) {
+        this(id, uuid, name, validUntil, lastProlongDate, paid, false, null, null);
+    }
 
     public PlayerEntity(String name, boolean paid, UUID uuid, LocalDateTime validUntil, LocalDateTime lastProlongDate) {
-        this.name = name;
-        this.paid = paid;
-        this.uuid = uuid;
-        this.validUntil = validUntil;
-        this.lastProlongDate = lastProlongDate;
+        this(null, uuid, name, validUntil, lastProlongDate, paid, false, null, null);
     }
 }

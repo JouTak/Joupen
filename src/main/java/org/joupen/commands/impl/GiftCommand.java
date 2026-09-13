@@ -6,8 +6,8 @@ import org.joupen.commands.CommandAlias;
 @CommandAlias(
         name = "gift",
         minArgs = 1,
-        maxArgs = 2,
-        usage = "/joupen gift <player|all> [duration]",
+        maxArgs = Integer.MAX_VALUE,
+        usage = "/joupen gift <player|all> [duration] [reason]",
         permission = "joupen.admin"
 )
 public class GiftCommand extends ProlongCommand {

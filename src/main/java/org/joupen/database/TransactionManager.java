@@ -1,6 +1,5 @@
 package org.joupen.database;
 
-
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.exception.DataAccessException;
