@@ -182,7 +182,7 @@ public class PlayerOperationService {
     }
 
     private PlayerEntity newPlayer(String name) {
-        return new PlayerEntity(name, false, INITIAL_UUID.getUuid(), null, now().minusDays(1));
+        return new PlayerEntity(name, false, INITIAL_UUID.getUuid(), null, now());
     }
 
     private LocalDateTime now() {
