@@ -109,6 +109,10 @@ public class PlayerJoinEventHandler implements Listener {
             }
         }
 
+        if (playerAccessService.shouldGrantTemporaryBonus(playerEntity, now)) {
+            operations.bindOnTemporaryAccess(playerEntity.getName(), player.getUniqueId(), now);
+        }
+
         playerLoginEvent.allow();
     }
 

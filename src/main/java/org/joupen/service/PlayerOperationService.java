@@ -135,6 +135,21 @@ public class PlayerOperationService {
         });
     }
 
+    public OperationResult bindOnTemporaryAccess(String name, UUID uuid, LocalDateTime now){
+        OperationMetadata metadata = new OperationMetadata(null, "temporary-login", name, uuid.toString() + ":" + now.toLocalDate());
+        return apply(name, metadata, "WINDOW_JOIN:" + uuid + ":" + now.toLocalDate(), (current, history) -> {
+            PlayerEntity after = current.map(PlayerOperation::snapshot).orElseThrow(() -> new OperationException("player-not-found"));
+            after.setValidUntil(after.getValidUntil().plusDays(1));
+            LocalDateTime nextDay = now.toLocalDate().plusDays(1).atStartOfDay();
+
+            after.setTemporaryAccessFrom(nextDay.isBefore(after.getTemporaryAccessUntil())
+                    ? nextDay
+                    : after.getTemporaryAccessUntil()
+            );
+            return operation(current, after, OperationType.TEMPORARY_BONUS, 86400);
+        });
+    }
+
     public OperationResult importPlayer(PlayerEntity player, OperationMetadata metadata) {
         return apply(player.getName(), metadata, "IMPORT:" + Utils.toJson(player), (current, history) -> {
             if (current.isPresent()) throw new OperationException("player-already-exists");
@@ -163,7 +178,9 @@ public class PlayerOperationService {
 
     private boolean reversible(PlayerOperation operation) {
         return operation.getType() != OperationType.UNDO && operation.getType() != OperationType.FIRST_JOIN
-                && operation.getType() != OperationType.MIGRATION;
+                && operation.getType() != OperationType.MIGRATION
+                && operation.getType() != OperationType.TEMPORARY_BONUS;
+
     }
 
     private OperationResult apply(String name, OperationMetadata metadata, String request,
