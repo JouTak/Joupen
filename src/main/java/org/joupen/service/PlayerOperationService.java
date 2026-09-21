@@ -109,13 +109,6 @@ public class PlayerOperationService {
                     after.setTemporaryAccessFrom(original.getBefore() == null ? null : original.getBefore().getTemporaryAccessFrom());
                     after.setTemporaryAccessUntil(original.getBefore() == null ? null : original.getBefore().getTemporaryAccessUntil());
                 }
-                case TEMPORARY_BONUS -> {
-                    PlayerEntity before = original.getBefore();
-
-                    after.setValidUntil(before.getValidUntil());
-                    after.setTemporaryAccessFrom(before.getTemporaryAccessFrom());
-                    after.setTemporaryAccessUntil(before.getTemporaryAccessUntil());
-                }
                 default -> {
                     if (after.getValidUntil() == null) throw new OperationException("pass-not-found");
                     after.setValidUntil(after.getValidUntil().plusSeconds(seconds));
@@ -144,7 +137,7 @@ public class PlayerOperationService {
     }
 
     public OperationResult bindOnTemporaryAccess(String name, UUID uuid, LocalDateTime now){
-        OperationMetadata metadata = new OperationMetadata(null, "temporary-login", name, uuid.toString());
+        OperationMetadata metadata = new OperationMetadata(null, "temporary-login", name, uuid.toString() + ":" + now.toLocalDate());
         return apply(name, metadata, "WINDOW_JOIN:" + uuid + ":" + now.toLocalDate(), (current, history) -> {
             PlayerEntity after = current.map(PlayerOperation::snapshot).orElseThrow(() -> new OperationException("player-not-found"));
             after.setValidUntil(after.getValidUntil().plusDays(1));
@@ -186,7 +179,9 @@ public class PlayerOperationService {
 
     private boolean reversible(PlayerOperation operation) {
         return operation.getType() != OperationType.UNDO && operation.getType() != OperationType.FIRST_JOIN
-                && operation.getType() != OperationType.MIGRATION;
+                && operation.getType() != OperationType.MIGRATION
+                && operation.getType() != OperationType.TEMPORARY_BONUS;
+
     }
 
     private OperationResult apply(String name, OperationMetadata metadata, String request,
