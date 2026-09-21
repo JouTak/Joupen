@@ -1,5 +1,6 @@
 package org.joupen.service;
 
+import jdk.dynalink.Operation;
 import org.joupen.domain.OperationException;
 import org.joupen.domain.OperationMetadata;
 import org.joupen.domain.OperationResult;
@@ -108,6 +109,13 @@ public class PlayerOperationService {
                     after.setTemporaryAccessFrom(original.getBefore() == null ? null : original.getBefore().getTemporaryAccessFrom());
                     after.setTemporaryAccessUntil(original.getBefore() == null ? null : original.getBefore().getTemporaryAccessUntil());
                 }
+                case TEMPORARY_BONUS -> {
+                    PlayerEntity before = original.getBefore();
+
+                    after.setValidUntil(before.getValidUntil());
+                    after.setTemporaryAccessFrom(before.getTemporaryAccessFrom());
+                    after.setTemporaryAccessUntil(before.getTemporaryAccessUntil());
+                }
                 default -> {
                     if (after.getValidUntil() == null) throw new OperationException("pass-not-found");
                     after.setValidUntil(after.getValidUntil().plusSeconds(seconds));
@@ -132,6 +140,21 @@ public class PlayerOperationService {
             }
             after.setUuid(uuid);
             return operation(current, after, OperationType.FIRST_JOIN, seconds);
+        });
+    }
+
+    public OperationResult bindOnTemporaryAccess(String name, UUID uuid, LocalDateTime now){
+        OperationMetadata metadata = new OperationMetadata(null, "temporary-login", name, uuid.toString());
+        return apply(name, metadata, "WINDOW_JOIN:" + uuid + ":" + now.toLocalDate(), (current, history) -> {
+            PlayerEntity after = current.map(PlayerOperation::snapshot).orElseThrow(() -> new OperationException("player-not-found"));
+            after.setValidUntil(after.getValidUntil().plusDays(1));
+            LocalDateTime nextDay = now.toLocalDate().plusDays(1).atStartOfDay();
+
+            after.setTemporaryAccessFrom(nextDay.isBefore(after.getTemporaryAccessUntil())
+                    ? nextDay
+                    : after.getTemporaryAccessUntil()
+            );
+            return operation(current, after, OperationType.TEMPORARY_BONUS, 86400);
         });
     }
 

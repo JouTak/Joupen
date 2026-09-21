@@ -29,4 +29,8 @@ public class PlayerAccessService {
         LocalDateTime until = player.getTemporaryAccessUntil();
         return from != null && until != null && !from.isAfter(now) && until.isAfter(now);
     }
+
+    public boolean shouldGrantTemporaryBonus(PlayerEntity player, LocalDateTime now) {
+        return isPassActive(player, now) && isTemporaryAccessActive(player, now);
+    }
 }

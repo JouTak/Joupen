@@ -7,6 +7,7 @@ public enum OperationType {
     COMPENSATION,
     APPROVAL,
     TEMPORARY_ACCESS,
+    TEMPORARY_BONUS,
     UNDO,
     FIRST_JOIN,
     IMPORT,
