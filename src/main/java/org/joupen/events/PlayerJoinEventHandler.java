@@ -3,6 +3,7 @@ package org.joupen.events;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -74,7 +75,7 @@ public class PlayerJoinEventHandler implements Listener {
             optionalEntity = playerRepository.findByName(player.getName());
         }
 
-        boolean hasPlayedBefore = player.hasPlayedBefore();
+        boolean hasPlayedBefore = Bukkit.getOfflinePlayer(player.getUniqueId()).hasPlayedBefore();
         LocalDateTime now = LocalDateTime.now();
         AccessDecision decision = playerAccessService.evaluate(optionalEntity, hasPlayedBefore, now);
 
